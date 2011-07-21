@@ -1,0 +1,147 @@
+---------------------------------------
+TOP1:
+
++------------------+
+|     internet     |
++---|---------|----+
++---|----+----|----+
+| eth0.0 |  eth0.1 |
++---|----+-|-----|-+
++---|----+ |  +--|-------+
+| kernel --'  |  bridge  |
+|netstack|    +----|-----+
++--------+    +----|---------+
+              |   tap0       |
+              |--------------|
+              | /dev/net/tun |
+              +--|----|---|--+
+                poll  |   |
+                 |  read  |
+                 |    |  write
+	      +--|----|---|--+
+              | my netstack  |
+              +--------------+
+
+---------------------------------------
+TOP2(my real network):
+
+      gateway
+      (10.20.133.20)
+     /              \
+    /                \
+ eth0.0          .---eth0.1
+ (10.20.133.24)  |   (0.0.0.0)
+   |             |    |
+  kernel         |   br0
+  network -------'   (10.20.133.25)
+  stack               |
+                     veth0 [tap device]
+                     (0.0.0.0)
+                      |
+                     /dev/net/tun
+                      |
+                     usermode
+                     network
+
+-----------------------------------------
+TOP3( usermode network stack receiving packet )
+
+ network
+    |
+    | packet recv
+   \|/
+xxx_interrupt() --> netif_rx()
+ { eth0 }                  |
+                           |
+                           |
+    .----------------------'
+    |  raise irq
+   \|/
+softirq: net_rx_action() --> netif_receive_skb() --> handle_bridge()
+                                                        { br0 }
+                                                           |
+                                                           |
+    .------------------------------------------------------'
+    |
+   \|/
+dev_queue_xmit(skb) --> tun_net_xmit()
+ [skb->dev == tap0]     1. put skb into tun's skbqueue
+                        2. wake up processes waiting for /dev/net/tun (read/poll)
+                             |
+                             |
+                            \|/
+                         process (read/poll)
+                       { usermode network stack }
+
+
+-----------------------------------------
+TOP4 ( usermode network stack sending packet )
+
+ usermode
+ network
+ stack
+   |
+   | write
+  \|/
+/dev/net/tun --> tun_chr_aio_write() --> tun_get_user()
+                                         1. copy data from usermode
+                                         2. make skb(sending packet)
+                                         3. netif_rx_ni
+                                             |
+                                             |
+   .-----------------------------------------'
+   |
+  \|/
+netif_rx(skb)
+1. put packet into queue
+2. raise softirq
+   |
+  \|/
+softirq: net_rx_action() --> netif_receive_skb() --> handle_bridge()
+                                                        { br0 }
+                                                           |
+                                                           |
+    .------------------------------------------------------'
+    |
+   \|/
+dev_queue_xmit(skb) --> {eth0 netdevice}_hard_xmit()
+ [skb->dev == eth0]                       |
+                                          |  packet send
+                                         \|/
+                                       network
+
+-----------------------------------------
+TOP5(arping model)
+
+veth0
+(10.0.0.2)
+
+route:
+Destination  Use Iface
+10.0.0.0     veth0
+
+
+arping 10.0.0.1 --> socket send --> route --> veth0 --> veth0::dev_hard_xmit
+                 ( arp packet:                              |
+                  10.0.0.2 request                          |
+                  hwaddr of 10.0.0.1)                       |         _veth0 (10.0.0.2)_
+                                                            |
+arping received <-- socket recv <-- veth0(netif_rx) <----.  |
+                                                         |  |
+                                                     /dev/net/tun
+                                                         |  |
+                                                (write)  |  |  (read)
+                                                         |  |
+                          .--------> reply --> netdev_tx-'  |         _netstack (10.0.0.1)_
+                          |                                \|/
+                          |                                 '
+                          '- arp_in <-- netif_in <-----  process
+        update arp cache <------'                   { usermode network stack }
+
+[ route module and netif_rx() are from linux kernel ]
+
+NOTE: 10.0.0.2 is veth0 ip address, not our network stack ip address.
+Our network stack is `outside network` in terms of veth0,
+so our program is just an emulator of outside network,
+we must assign a fake ip address for our program!
+
