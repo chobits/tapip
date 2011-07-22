@@ -47,9 +47,10 @@ static struct command cmds[] = {
 void builtin_help(int argc, char **argv)
 {
 	struct command *cmd;
-	for (cmd = &cmds[0]; cmd->cmd_num; cmd++) {
-		printf("%s: %s\n", cmd->cmd_str, cmd->cmd_help);		
-	}
+	int i;
+	for (i = 1, cmd = &cmds[0]; cmd->cmd_num; i++, cmd++)
+		printf(" %d  %s: %s\n", i, cmd->cmd_str, cmd->cmd_help);
+
 }
 
 static int get_line(char *buf, int bufsz)

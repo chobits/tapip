@@ -62,4 +62,16 @@ void ifconfig(int argc, char **argv)
 		macfmt(veth->net_hwaddr),
 		ipfmt(veth->net_ipaddr),
 		veth->net_mtu);
+	printf("netstack  HWaddr "MACFMT"\n"
+		"          IPaddr "IPFMT"\n"
+		"          RX packet:%u bytes:%u errors:%u\n"
+		"          TX packet:%u bytes:%u errors:%u\n",
+		macfmt(veth->_net_hwaddr),
+		ipfmt(veth->_net_ipaddr),
+		veth->net_stats.rx_packets,
+		veth->net_stats.rx_bytes,
+		veth->net_stats.rx_errors,
+		veth->net_stats.tx_packets,
+		veth->net_stats.tx_bytes,
+		veth->net_stats.tx_errors);
 }
