@@ -7,33 +7,41 @@
  * The algorithm is strict based on RFC 826
  * ARP Packet Reception
  */
-int arp_in(struct netdev *nd, struct pkbuf *pkb)
+void arp_in(struct netdev *nd, struct pkbuf *pkb)
 {
 	struct ether *ehdr = (struct ether *)pkb->pk_data;
 	struct arp *ahdr = (struct arp *)ehdr->eth_data;
 	struct arpentry *ae;
 	int ret = PK_DROP;
 
-	arpdbg(IPFMT " -> " IPFMT, ipfmt(ahdr->arp_sip), ipfmt(ahdr->arp_tip));
 
-	if (pkb->pk_len < ETH_HRD_SZ + ARP_HRD_SZ)
+	if (pkb->pk_len < ETH_HRD_SZ + ARP_HRD_SZ) {
+		arpdbg("arp packet it too small");
 		goto err_free_pkb;
+	}
 
 	/* safe check for arp cheating */
-	if (hwacmp(ahdr->arp_sha, ehdr->eth_src) != 0)
+	if (hwacmp(ahdr->arp_sha, ehdr->eth_src) != 0) {
+		arpdbg("error sender hardware address");
 		goto err_free_pkb;
+	}
 	arp_hton(ahdr);
 
 #if defined(ARP_ETHERNET) && defined(ARP_IP)
-	if (ahdr->arp_hrd != ARP_HRD_ETHER)
+	/* ethernet/ip arp only */
+	if (ahdr->arp_hrd != ARP_HRD_ETHER || ahdr->arp_pro != ETH_P_IP ||
+		ahdr->arp_hrdlen != ETH_ALEN || ahdr->arp_prolen != IP_ALEN) {
+		arpdbg("unsupported L2/L3 protocol");
 		goto err_free_pkb;
-
-	/* ethernet arp only */
-	if (ahdr->arp_hrdlen != ETH_ALEN || ahdr->arp_prolen != IP_ALEN)
-		goto err_free_pkb;
+	}
 #endif
-	
-	arpdbg("lookup");
+	if (ahdr->arp_op != ARP_OP_REQUEST && ahdr->arp_op != ARP_OP_REPLY) {
+		arpdbg("unknown arp operation");
+		goto err_free_pkb;
+	}
+
+	/* real arp process */
+	arpdbg(IPFMT " -> " IPFMT, ipfmt(ahdr->arp_sip), ipfmt(ahdr->arp_tip));
 	if (ae = arp_lookup(ahdr->arp_pro, ahdr->arp_sip)) {
 		/* update old arp entry in cache */
 		ae->ae_ttl = ARP_TIMEOUT;
@@ -41,7 +49,6 @@ int arp_in(struct netdev *nd, struct pkbuf *pkb)
 		hwacpy(ae->ae_hwaddr, ahdr->arp_sha);
 	}
 
-	arpdbg("network ip address: "IPFMT , ipfmt(nd->_net_ipaddr));
 	if (ahdr->arp_tip != nd->_net_ipaddr)
 		goto err_free_pkb;
 
@@ -49,7 +56,7 @@ int arp_in(struct netdev *nd, struct pkbuf *pkb)
 		arp_insert(ahdr->arp_pro, ahdr->arp_sip, ahdr->arp_sha);
 
 	if (ahdr->arp_op == ARP_OP_REQUEST) {
-		arpdbg("reply");
+		arpdbg("replying arp request");
 		/* arp field */
 		ahdr->arp_op = ARP_OP_REPLY;
 		hwacpy(ahdr->arp_tha, ahdr->arp_sha);
@@ -59,13 +66,9 @@ int arp_in(struct netdev *nd, struct pkbuf *pkb)
 		arp_ntoh(ahdr);
 		/* ether field */
 		netdev_tx(nd, pkb, ARP_HRD_SZ, ETH_P_ARP, ehdr->eth_src);
-		return PK_RECV;
-	} else if (ahdr->arp_op == ARP_OP_REPLY) {
-		arpdbg("recv reply");
-		ret = PK_RECV;
 	}
-
+	/* arp reply has been handled! */
+	return;
 err_free_pkb:
 	free_pkb(pkb);
-	return ret;
 }

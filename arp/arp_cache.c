@@ -51,7 +51,7 @@ void arp_timer(int delta)
 			continue;
 		ae->ae_ttl -= delta;
 		if (ae->ae_ttl <= 0)
-			ae->ae_state = ARP_WAITING;
+			ae->ae_state = ARP_FREE;
 	}
 }
 
