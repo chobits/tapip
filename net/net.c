@@ -43,6 +43,11 @@ void netdev_init(void)
 	hwacpy(veth->_net_hwaddr, FAKE_HWADDR);
 	printf("network ip address: "IPFMT"\n", ipfmt(veth->_net_ipaddr));
 	printf("network hw address: "MACFMT"\n", macfmt(veth->_net_hwaddr));
+	/* init stats */
+	veth->net_stats.rx_packets = 0;
+	veth->net_stats.tx_bytes = 0;
+	veth->net_stats.rx_packets = 0;
+	veth->net_stats.tx_bytes = 0;
 }
 
 void netdev_exit(void)

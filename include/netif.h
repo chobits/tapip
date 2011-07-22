@@ -4,8 +4,18 @@
 #define NETDEV_ALEN	6
 #define NETDEV_NLEN	16	/* IFNAMSIZ */
 
+struct netstats {
+	unsigned int rx_packets;
+	unsigned int tx_packets;
+	unsigned int rx_errors;
+	unsigned int tx_errors;
+	unsigned int rx_bytes;
+	unsigned int tx_bytes;
+};
+
 /* network interface device */
 struct netdev {
+	/* tap device information */
 	int net_fd;				/* virtual netif file descriptor */
 	int net_mtu;
 	unsigned int  net_ipaddr;		/* dev binding ip address */
@@ -14,7 +24,8 @@ struct netdev {
 	/* our netstack information */
 	unsigned int _net_ipaddr;		/* fake ip address */
 	unsigned char _net_hwaddr[NETDEV_ALEN];	/* fake hardware address */
-} __attribute__((packed));
+	struct netstats net_stats;		/* protocol independent statistic */
+};
 
 
 #define PK_DROP		0

@@ -33,7 +33,7 @@ void getmtu_tap(char *name, int *mtu)
 		perrx("ioctl SIOCGIFHWADDR");
 	}
 	*mtu = ifr.ifr_mtu;
-	close(skfd);	
+	close(skfd);
 	dbg("mtu: %d", ifr.ifr_mtu);
 }
 
@@ -55,7 +55,7 @@ void getipaddr_tap(char *name, unsigned int *ipaddr)
 	}
 	saddr = (struct sockaddr_in *)&ifr.ifr_addr;
 	*ipaddr = saddr->sin_addr.s_addr;
-	close(skfd);	
+	close(skfd);
 	dbg("IPaddr: "IPFMT, ipfmt(*ipaddr));
 }
 
@@ -100,11 +100,9 @@ int alloc_tap(char *dev)
 	 * if created already, just bind tun with file
 	 */
 	if (ioctl(tapfd, TUNSETIFF, (void *)&ifr) < 0) {
-		if (errno != EBUSY) {
-			perror("ioctl TUNSETIFF");
-			close(tapfd);
-			return -1;
-		}
+		perror("ioctl TUNSETIFF");
+		close(tapfd);
+		return -1;
 	}
 
 	return tapfd;

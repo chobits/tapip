@@ -83,20 +83,27 @@ void netdev_send(struct netdev *nd, struct pkbuf *pkb, int len)
 {
 	int l;
 	l = write(nd->net_fd, pkb->pk_data, len);
-	if (l < 0)
+	if (l != len) {
 		perror("write net dev");
-	else
+		nd->net_stats.tx_errors++;
+	} else {
+		nd->net_stats.tx_packets++;
+		nd->net_stats.tx_bytes += l;
 		devdbg("write net dev size: %d\n", l);
+	}
 }
 
 int netdev_recv(struct netdev *nd, struct pkbuf *pkb)
 {
 	int l;
 	l = read(nd->net_fd, pkb->pk_data, nd->net_mtu + sizeof(struct ether));
-	if (l < 0)
+	if (l < 0) {
 		perror("read net dev");
-	else {
+		nd->net_stats.rx_errors++;
+	} else {
 		pkb->pk_len = l;
+		nd->net_stats.rx_packets++;
+		nd->net_stats.rx_bytes += l;
 		devdbg("read net dev size: %d\n", l);
 	}
 
