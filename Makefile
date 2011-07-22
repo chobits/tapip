@@ -28,3 +28,6 @@ clean:
 	@(cd arp/; make clean)
 	@(cd lib/; make clean)
 	rm -f net_stack
+
+lines:
+	wc -l `find |grep "\.[ch]$$"`
