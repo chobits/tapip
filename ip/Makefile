@@ -2,22 +2,18 @@ CC = gcc
 LD = ld
 CFLAGS = -I../include
 
-OBJS	=	net.o		\
-		netdev.o	\
-		pkb.o		\
-		tap.o
+OBJS	=	ip.o		\
+		ip_frag.o
 
-all:net_obj.o
-net_obj.o:$(OBJS)
+all:ip_obj.o
+ip_obj.o:$(OBJS)
 	$(LD) -r -o $@ $^
 
-net.o:net.c
+ip.o:ip.c
 	$(CC) $(CFLAGS) -c $< -o $@
-netdev.o:netdev.c
+ip_frag.o:ip_frag.c
 	$(CC) $(CFLAGS) -c $< -o $@
-pkb.o:pkb.c
-	$(CC) $(CFLAGS) -c $< -o $@
-tap.o:tap.c
+route.o:route.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

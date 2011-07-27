@@ -4,6 +4,8 @@
 #define NETDEV_ALEN	6
 #define NETDEV_NLEN	16	/* IFNAMSIZ */
 
+#include "list.h"
+
 struct netstats {
 	unsigned int rx_packets;
 	unsigned int tx_packets;
@@ -27,11 +29,8 @@ struct netdev {
 	struct netstats net_stats;		/* protocol independent statistic */
 };
 
-
-#define PK_DROP		0
-#define PK_RECV		1
-
 struct pkbuf {
+	struct list_head pk_list;	/* for ip fragment */
 	int pk_len;
 	unsigned char pk_data[0];
 } __attribute__((packed));
@@ -70,7 +69,19 @@ extern void netdev_tx(struct netdev *nd, struct pkbuf *pkb, int len,
 extern void net_timer(void);
 extern void netdev_interrupt(void);
 
-extern struct pkbuf *alloc_pkb(struct netdev *nd);
+extern struct pkbuf *alloc_pkb(int size);
+extern struct pkbuf *alloc_netdev_pkb(struct netdev *nd);
+extern void pkbdbg(struct pkbuf *pkb);
+
+#ifdef DEBUG_PKB
+extern void _free_pkb(struct pkbuf *pkb);
+#define free_pkb(pkb)\
+do {\
+	dbg("");\
+	_free_pkb(pkb);\
+} while (0)
+#else
 extern void free_pkb(struct pkbuf *pkb);
+#endif
 
 #endif	/* netif.h */

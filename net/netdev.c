@@ -19,22 +19,7 @@
 #include "netif.h"
 #include "ether.h"
 #include "lib.h"
-
-struct pkbuf *alloc_pkb(struct netdev *nd)
-{
-	struct pkbuf *pkb;
-	pkb = malloc(sizeof(*pkb) + nd->net_mtu + sizeof(struct ether));
-	if (!pkb) {
-		perror("malloc");
-		exit(EXIT_FAILURE);
-	}
-	return pkb;
-}
-
-void free_pkb(struct pkbuf *pkb)
-{
-	free(pkb);
-}
+#include "list.h"
 
 /* Altough dev is already created, this function is safe! */
 struct netdev *netdev_alloc(char *dev)
@@ -71,12 +56,15 @@ void netdev_free(struct netdev *nd)
 	free(nd);
 }
 
+#define FAKE_TAP_ADDR 0x0200000a	/* 10.0.0.2 */
 void netdev_fillinfo(struct netdev *nd)
 {
 	getname_tap(nd->net_fd, nd->net_name);
 	gethwaddr_tap(nd->net_fd, nd->net_hwaddr);
 	getmtu_tap(nd->net_name, &nd->net_mtu);
+	setipaddr_tap(nd->net_name, FAKE_TAP_ADDR);
 	getipaddr_tap(nd->net_name, &nd->net_ipaddr);
+	setup_tap(nd->net_name);
 }
 
 void netdev_send(struct netdev *nd, struct pkbuf *pkb, int len)

@@ -59,7 +59,7 @@ void netdev_exit(void)
 void netdev_rx(struct netdev *nd)
 {
 	struct pkbuf *pkb;
-	pkb = alloc_pkb(nd);
+	pkb = alloc_netdev_pkb(nd);
 	if (netdev_recv(nd, pkb) > 0)
 		net_in(nd, pkb);
 	else
@@ -109,7 +109,7 @@ void net_in(struct netdev *nd, struct pkbuf *pkb)
 		arp_in(nd, pkb);
 		break;
 	case ETH_P_IP:
-//		ip_in(nd, pkb);
+		ip_in(nd, pkb);
 		break;
 	default:
 		dbg("unkown ether packet type");
@@ -120,10 +120,11 @@ void net_in(struct netdev *nd, struct pkbuf *pkb)
 void net_timer(void)
 {
 	/* timer init if need */
-
+	sleep(1);
 	/* timer runs */
 	while (1) {
 		arp_timer(1);
+		ip_timer(1);
 		sleep(1);
 	}
 }

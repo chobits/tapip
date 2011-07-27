@@ -17,6 +17,45 @@
 
 #define TUNTAPDEV "/dev/net/tun"
 
+void setflags_tap(char *name, unsigned short flags, int set)
+{
+	struct ifreq ifr = {};
+	int skfd;
+
+	skfd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+	if (skfd < 0)
+		perrx("socket");
+
+	strcpy(ifr.ifr_name, name);
+	/* get original flags */
+	if (ioctl(skfd, SIOCGIFFLAGS, (void *)&ifr) < 0) {
+		close(skfd);
+		perrx("socket SIOCGIFFLAGS");
+	}
+	/* set new flags */
+	if (set)
+		ifr.ifr_flags |= flags;
+	else
+		ifr.ifr_flags &= ~flags & 0xffff;
+	if (ioctl(skfd, SIOCSIFFLAGS, (void *)&ifr) < 0) {
+		close(skfd);
+		perrx("socket SIOCGIFFLAGS");
+	}
+	close(skfd);
+}
+
+void setdown_tap(char *name)
+{
+	setflags_tap(name, IFF_UP | IFF_RUNNING, 0);
+	dbg("ifdown %s", name);
+}
+
+void setup_tap(char *name)
+{
+	setflags_tap(name, IFF_UP | IFF_RUNNING, 1);
+	dbg("ifup %s", name);
+}
+
 void getmtu_tap(char *name, int *mtu)
 {
 	struct ifreq ifr = {};
@@ -37,6 +76,28 @@ void getmtu_tap(char *name, int *mtu)
 	dbg("mtu: %d", ifr.ifr_mtu);
 }
 
+void setipaddr_tap(char *name, unsigned int ipaddr)
+{
+	struct ifreq ifr = {};
+	struct sockaddr_in *saddr;
+	int skfd;
+
+	skfd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+	if (skfd < 0)
+		perrx("socket");
+	
+	strcpy(ifr.ifr_name, name);
+	saddr = (struct sockaddr_in *)&ifr.ifr_addr;
+	saddr->sin_family = AF_INET;	
+	saddr->sin_addr.s_addr = ipaddr;
+	if (ioctl(skfd, SIOCSIFADDR, (void *)&ifr) < 0) {
+		close(skfd);
+		perrx("socket SIOCSIFADDR");
+	}
+	close(skfd);
+	dbg("set IPaddr: "IPFMT, ipfmt(ipaddr));
+}
+
 void getipaddr_tap(char *name, unsigned int *ipaddr)
 {
 	struct ifreq ifr = {};
@@ -48,7 +109,6 @@ void getipaddr_tap(char *name, unsigned int *ipaddr)
 	if (skfd < 0)
 		perrx("socket");
 	strcpy(ifr.ifr_name, name);
-	/* get net order hardware address */
 	if (ioctl(skfd, SIOCGIFADDR, (void *)&ifr) < 0) {
 		close(skfd);
 		perrx("socket SIOCGIFADDR");
@@ -56,7 +116,7 @@ void getipaddr_tap(char *name, unsigned int *ipaddr)
 	saddr = (struct sockaddr_in *)&ifr.ifr_addr;
 	*ipaddr = saddr->sin_addr.s_addr;
 	close(skfd);
-	dbg("IPaddr: "IPFMT, ipfmt(*ipaddr));
+	dbg("get IPaddr: "IPFMT, ipfmt(*ipaddr));
 }
 
 void getname_tap(int tapfd, char *name)

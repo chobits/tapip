@@ -17,28 +17,26 @@ void signal_wait(int signum)
 
 void netdebug(int argc, char **argv)
 {
-	if (strcmp(argv[1], "dev") == 0) {
-		net_debug |= NET_DEBUG_DEV;
-		ferr("l2 debug mode\n");
-	} else if (strcmp(argv[1], "l2") == 0) {
-		net_debug |= NET_DEBUG_L2;
-		ferr("l2 debug mode\n");
-	} else if (strcmp(argv[1], "arp") == 0) {
-		net_debug |= NET_DEBUG_ARP;
-		ferr("arp debug mode\n");
-	} else if (strcmp(argv[1], "ip") == 0) {
-		net_debug |= NET_DEBUG_IP;
-		ferr("ip debug mode\n");
-	} else if (strcmp(argv[1], "udp") == 0) {
-		net_debug |= NET_DEBUG_UDP;
-		ferr("udp debug mode\n");
-	} else if (strcmp(argv[1], "tcp") == 0) {
-		net_debug |= NET_DEBUG_TCP;
-		ferr("tcp debug mode\n");
-	} else {
-		ferr("Usage: debug dev|l2|arp|ip|udp|tcp\n");
-		return;
-	}
+	do {
+		argc--;
+		dbg("%s", argv[argc]);
+		if (strcmp(argv[argc], "dev") == 0) {
+			net_debug |= NET_DEBUG_DEV;
+		} else if (strcmp(argv[argc], "l2") == 0) {
+			net_debug |= NET_DEBUG_L2;
+		} else if (strcmp(argv[argc], "arp") == 0) {
+			net_debug |= NET_DEBUG_ARP;
+		} else if (strcmp(argv[argc], "ip") == 0) {
+			net_debug |= NET_DEBUG_IP;
+		} else if (strcmp(argv[argc], "udp") == 0) {
+			net_debug |= NET_DEBUG_UDP;
+		} else if (strcmp(argv[argc], "tcp") == 0) {
+			net_debug |= NET_DEBUG_TCP;
+		} else {
+			ferr("Usage: debug (dev|l2|arp|ip|udp|tcp)+\n");
+			return;
+		}
+	} while (argc > 1);
 	ferr("enter ^C to exit debug mode\n");
 
 	/* waiting for interrupt signal */

@@ -1,0 +1,17 @@
+================================================
+1. test arp:
+
+(bob)	bob # sudo ./net_stack
+(bob)	[net shell]: debug arp
+	(waiting debug information)
+
+(tom)	tom # sudo arping 10.0.0.1 -I eth0
+
+================================================
+2. test ip:
+
+(bob)	bob # sudo ./net_stack
+(bob)	[net shell]: debug ip
+	(waiting debug information)
+
+(tom)	tom # ping 10.0.0.1

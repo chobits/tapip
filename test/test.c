@@ -46,7 +46,7 @@ int newthread(pfunc_t thread_func)
 	pthread_t tid;
 	if (pthread_create(&tid, NULL, thread_func, NULL))
 		perrx("pthread_create");
-	return tid;	
+	return tid;
 }
 
 void net_stack_init(void)

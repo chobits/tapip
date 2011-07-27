@@ -10,7 +10,7 @@ all:test_obj.o
 test_obj.o:$(OBJS)
 	$(LD) -r -o $@ $^
 test.o:test.c
-	$(CC) $(CFLAGS) -lpthread -c -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
 net_command.o:net_command.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 shell.o:shell.c

@@ -12,11 +12,9 @@ void arp_in(struct netdev *nd, struct pkbuf *pkb)
 	struct ether *ehdr = (struct ether *)pkb->pk_data;
 	struct arp *ahdr = (struct arp *)ehdr->eth_data;
 	struct arpentry *ae;
-	int ret = PK_DROP;
-
 
 	if (pkb->pk_len < ETH_HRD_SZ + ARP_HRD_SZ) {
-		arpdbg("arp packet it too small");
+		arpdbg("arp packet is too small");
 		goto err_free_pkb;
 	}
 
