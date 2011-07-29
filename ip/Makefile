@@ -3,7 +3,8 @@ LD = ld
 CFLAGS = -I../include
 
 OBJS	=	ip.o		\
-		ip_frag.o
+		ip_frag.o	\
+		route.o
 
 all:ip_obj.o
 ip_obj.o:$(OBJS)

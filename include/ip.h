@@ -52,6 +52,7 @@ static inline void ip_ntoh(struct ip *iphdr)
         iphdr->ip_id = ntohs(iphdr->ip_id);
         iphdr->ip_fragoff = ntohs(iphdr->ip_fragoff);
 }
+#define ip_hton(ip) ip_ntoh(ip)
 
 /* Fragment */
 struct fragment {

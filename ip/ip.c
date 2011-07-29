@@ -1,6 +1,8 @@
 #include "netif.h"
 #include "ether.h"
+#include "arp.h"
 #include "ip.h"
+#include "route.h"
 
 #include "lib.h"
 
@@ -54,12 +56,32 @@ void ip_recv(struct pkbuf *pkb)
 	free_pkb(pkb);
 }
 
+void ip_send(struct rtentry *rt, struct pkbuf *pkb)
+{
+	struct arpentry *ae;
+	ae = arp_lookup(ETH_P_IP, rt->rt_ipaddr);
+	if (!ae) {
+		ae = arp_alloc();
+		ae->ae_pro = rt->rt_ipaddr;
+		ae->ae_dev = rt->rt_dev;
+		list_add_tail(&pkb->pk_list, &ae->ae_list);
+		arp_request(ae);
+	} else {
+		netdev_tx(rt->rt_dev, pkb, pkb->pk_len - ETH_HRD_SZ, ETH_P_IP, ae->ae_hwaddr);	
+	}
+}
+
 void ip_forward(struct netdev *nd, struct pkbuf *pkb)
 {
-	struct ether *ehdr = (struct ether *)pkb->pk_data;
-	struct ip *iphdr = (struct ip *)ehdr->eth_data;
-	ipdbg("no forward, host drops packet");
-	free_pkb(pkb);
+	struct ip *iphdr = pkb2ip(pkb);
+	struct rtentry *rt;
+	rt = rt_lookup(iphdr->ip_dst);
+	if (!rt) {
+		ipdbg("no route entry, drop packe");
+		free_pkb(pkb);
+	} else {
+		ip_send(rt, pkb);
+	}
 }
 
 void ip_in(struct netdev *nd, struct pkbuf *pkb)
@@ -99,9 +121,10 @@ void ip_in(struct netdev *nd, struct pkbuf *pkb)
 				ipfmt(iphdr->ip_src), ipfmt(iphdr->ip_dst),
 				hlen, iphdr->ip_len);
 	/* Is this packet sent to us? */
-	if (iphdr->ip_dst != nd->_net_ipaddr)
+	if (iphdr->ip_dst != nd->_net_ipaddr) {
+		ip_hton(iphdr);
 		ip_forward(nd, pkb);
-	else
+	} else
 		ip_recv(pkb);
 	return;
 

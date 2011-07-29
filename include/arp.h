@@ -3,6 +3,7 @@
 
 #include "ether.h"
 #include "ip.h"
+#include "list.h"
 
 #define ARP_ETHERNET
 #define ARP_IP
@@ -10,19 +11,25 @@
 /* arp cache */
 #define ARP_CACHE_SZ	20
 #define ARP_TIMEOUT	600	/* 10 minutes */
+#define ARP_WAITTIME	1
 
 /* arp entry state */
 #define ARP_FREE	1
 #define ARP_WAITING	2
 #define ARP_RESOLVED	3
 
+#define ARP_REQ_RETRY	4
+
 struct arpentry {
+	struct list_head ae_list;		/* packet pending for hard address */
+	struct netdev *ae_dev;			/* associated net interface */
+	int ae_retry;				/* arp reuqest retrying times */
+	int ae_ttl;				/* entry timeout */
 	unsigned int ae_state;			/* entry state */
-	unsigned int ae_ttl;			/* entry timeout */
 	unsigned short ae_pro;			/* L3 protocol supported by arp */
 	unsigned int ae_ipaddr;			/* L3 protocol address(ip) */
 	unsigned char ae_hwaddr[ETH_ALEN];	/* L2 protocol address(ethernet) */
-} __attribute__((packed));
+};
 
 /* arp format */
 #define ARP_HRD_ETHER		1
@@ -64,8 +71,10 @@ static inline void arp_hton(struct arp *ahdr)
 extern void arp_cache_traverse(void);
 extern void arp_cache_init(void);
 extern void arp_proc(int);
+
+extern struct arpentry *arp_alloc(void);
 extern struct arpentry *arp_lookup(unsigned short, unsigned int);
-extern int arp_insert(unsigned short, unsigned int, unsigned char *);
+extern int arp_insert(struct netdev *, unsigned short, unsigned int, unsigned char *);
 
 #endif	/* arp.h */
 

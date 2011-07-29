@@ -14,6 +14,7 @@ struct pkbuf *alloc_pkb(int size)
 		exit(EXIT_FAILURE);
 	}
 	pkb->pk_len = size;
+	pkb->pk_pro = 0xffff;
 	list_init(&pkb->pk_list);
 	return pkb;
 }

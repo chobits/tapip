@@ -100,7 +100,7 @@ void net_in(struct netdev *nd, struct pkbuf *pkb)
 				macfmt(ehdr->eth_src),
 				macfmt(ehdr->eth_dst),
 				ethpro(proto));
-
+	pkb->pk_pro = proto;
 	switch (proto) {
 	case ETH_P_RARP:
 //		rarp_in(nd, pkb);

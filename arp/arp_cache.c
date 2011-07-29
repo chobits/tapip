@@ -3,28 +3,51 @@
 #include "ether.h"
 #include "arp.h"
 #include "lib.h"
+#include "list.h"
 
 static struct arpentry arp_cache[ARP_CACHE_SZ];
 
-int arp_insert(unsigned short pro, unsigned int ipaddr, unsigned char *hwaddr)
+struct arpentry *arp_alloc(void)
 {
-	static int next;
+	static int next = 0;
 	int i;
+	struct arpentry *ae;
 	/* round-robin loop algorithm */
 	for (i = 0; i < ARP_CACHE_SZ; i++) {
 		if (arp_cache[next].ae_state == ARP_FREE)
-			goto found;
+			break;
 		next = (next + 1) % ARP_CACHE_SZ;
 	}
-	dbg("arp cache is full");
-	return -1;
-found:
-	arp_cache[i].ae_state = ARP_RESOLVED;
-	arp_cache[i].ae_pro = pro;
-	arp_cache[i].ae_ipaddr = ipaddr;
-	hwacpy(arp_cache[i].ae_hwaddr, hwaddr);
-	/* for next time inserting */
+	/* not found */
+	if (i >= ARP_CACHE_SZ) {
+		dbg("arp cache is full");
+		return NULL;
+	}
+	/* init */
+	ae = &arp_cache[next];
+	ae->ae_dev = NULL;
+	ae->ae_retry = ARP_REQ_RETRY;
+	ae->ae_ttl = ARP_WAITTIME;
+	ae->ae_state = ARP_WAITING;
+	ae->ae_pro = ETH_P_IP;		/* default protocol */
+	list_init(&ae->ae_list);
+	/* for next time allocation */
 	next = (next + 1) % ARP_CACHE_SZ;
+	return ae;
+}
+
+int arp_insert(struct netdev *nd, unsigned short pro,
+		unsigned int ipaddr, unsigned char *hwaddr)
+{
+	struct arpentry *ae;
+	ae = arp_alloc();
+	if (!ae)
+		return -1;
+	ae->ae_dev = nd;
+	ae->ae_pro = pro;
+	ae->ae_ipaddr = ipaddr;
+	ae->ae_state = ARP_RESOLVED;
+	hwacpy(ae->ae_hwaddr, hwaddr);
 	return 0;
 }
 
@@ -50,8 +73,16 @@ void arp_timer(int delta)
 		if (ae->ae_state == ARP_FREE)
 			continue;
 		ae->ae_ttl -= delta;
-		if (ae->ae_ttl <= 0)
-			ae->ae_state = ARP_FREE;
+		if (ae->ae_ttl <= 0) {
+			if ((ae->ae_state == ARP_WAITING && --ae->ae_retry < 0)
+				|| ae->ae_state == ARP_RESOLVED) {
+				ae->ae_state = ARP_FREE;
+			} else {
+				/* retry arp request */
+				ae->ae_ttl = ARP_WAITTIME;
+				arp_request(ae);
+			}
+		}
 	}
 }
 
