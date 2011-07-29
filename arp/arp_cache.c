@@ -45,6 +45,7 @@ int arp_insert(struct netdev *nd, unsigned short pro,
 		return -1;
 	ae->ae_dev = nd;
 	ae->ae_pro = pro;
+	ae->ae_ttl = ARP_TIMEOUT;
 	ae->ae_ipaddr = ipaddr;
 	ae->ae_state = ARP_RESOLVED;
 	hwacpy(ae->ae_hwaddr, hwaddr);

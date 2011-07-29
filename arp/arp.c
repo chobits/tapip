@@ -77,7 +77,6 @@ void arp_in(struct netdev *nd, struct pkbuf *pkb)
 	/* real arp process */
 	arpdbg(IPFMT " -> " IPFMT, ipfmt(ahdr->arp_sip), ipfmt(ahdr->arp_tip));
 	if (ae = arp_lookup(ahdr->arp_pro, ahdr->arp_sip)) {
-			
 		/* update old arp entry in cache */
 		hwacpy(ae->ae_hwaddr, ahdr->arp_sha);
 		/* send waiting packet (maybe we receive arp reply) */
