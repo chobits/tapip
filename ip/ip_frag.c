@@ -29,7 +29,15 @@ struct fragment *new_frag(struct ip *iphdr)
 
 void delete_frag(struct fragment *frag)
 {
-	ipdbg("");
+	struct pkbuf *pkb;
+	list_del(&frag->frag_list);
+	while (!list_empty(&frag->frag_pkb)) {
+		pkb = list_first_entry(&frag->frag_pkb, struct pkbuf, pk_list);
+		list_del(&pkb->pk_list);
+		free_pkb(pkb);
+	}
+	free(frag);
+	/* FIXME: icmp DESTINATION */
 }
 
 struct pkbuf *reass_frag(struct fragment *frag)
@@ -65,11 +73,13 @@ int insert_frag(struct pkbuf *pkb, struct fragment *frag)
 {
 	struct pkbuf *fragpkb;
 	struct ip *iphdr, *fraghdr, *prevhdr;
+	struct list_head *pos;
 	int off, hlen;
 
 	iphdr = pkb2ip(pkb);
 	off = ipoff(iphdr);
 	hlen = iphlen(iphdr);
+
 	/* Is last fragment? */
 	if ((iphdr->ip_fragoff & IP_FRAG_MF) == 0) {
 		if (frag->frag_size) {
@@ -81,13 +91,11 @@ int insert_frag(struct pkbuf *pkb, struct fragment *frag)
 		list_add_tail(&pkb->pk_list, &frag->frag_pkb);
 		return 0;
 	}
-	/* Is first fragment? */
-	if (list_empty(&frag->frag_pkb)) {
-		frag->frag_rsize += iphdr->ip_len - hlen;
-		list_add(&pkb->pk_list, &frag->frag_pkb);
-		return 0;
-	}
-	/* nornal fragment */
+
+	/* normal fragment */
+	pos = &frag->frag_pkb;
+	prevhdr = NULL;
+
 	list_for_each_entry(fragpkb, &frag->frag_pkb, pk_list) {
 		fraghdr = pkb2ip(fragpkb);
 		if (ipoff(fraghdr) == off) {
@@ -96,29 +104,36 @@ int insert_frag(struct pkbuf *pkb, struct fragment *frag)
 		}
 		/* prevhdr < iphdr < fraghdr */
 		if (off < ipoff(fraghdr)) {
-			/* Should strict head check? */
-			if (hlen != iphlen(fraghdr)) {
-				ipdbg("error ip fragment");
-				goto frag_drop;
-			}
-			/* iphdr end < fraghdr */
-			if (off + iphdr->ip_len - hlen > ipoff(fraghdr)) {
-				ipdbg("error ip fragment");
-				goto frag_drop;
-			}
-			/* prevhdr end < iphdr */
-			if (prevhdr &&
-				ipoff(prevhdr) + iphdr->ip_len - hlen > off) {
-				ipdbg("error ip fragment");
-				goto frag_drop;
-			}
-			list_add_tail(&pkb->pk_list, &fragpkb->pk_list);
-			frag->frag_rsize += iphdr->ip_len - hlen;
-			return 0;
+			pos = fragpkb->pk_list.prev;
+			goto frag_found;
 		}
 		prevhdr = fraghdr;
 	}
-	ipdbg("error ip fragment");
+
+	/* not found: pkb is the current max-offset fragment */
+	fraghdr = NULL;
+
+frag_found:
+	/* Should strict head check? */
+	if (fraghdr && hlen != iphlen(fraghdr)) {
+		ipdbg("error ip fragment");
+		goto frag_drop;
+	}
+	/* iphdr end < fraghdr */
+	if (fraghdr && off + iphdr->ip_len - hlen > ipoff(fraghdr)) {
+		ipdbg("error ip fragment");
+		goto frag_drop;
+	}
+	/* prevhdr end < iphdr */
+	if (prevhdr && ipoff(prevhdr) + iphdr->ip_len - hlen > off) {
+		ipdbg("error ip fragment");
+		goto frag_drop;
+	}
+
+	list_add(&pkb->pk_list, pos);
+	frag->frag_rsize += iphdr->ip_len - hlen;
+	return 0;
+
 frag_drop:
 	free_pkb(pkb);
 	return -1;
@@ -161,10 +176,10 @@ struct pkbuf *ip_reass(struct pkbuf *pkb)
 	return pkb;
 }
 
+/* FIXME: ip_timer test */
 void ip_timer(int delta)
 {
 	struct fragment *frag;
-	return;
 	/* FIXME: mutex-- for frag_head */
 	list_for_each_entry(frag, &frag_head, frag_list) {
 		/* condition race */
@@ -172,7 +187,7 @@ void ip_timer(int delta)
 			continue;
 		frag->frag_ttl -= delta;
 		if (frag->frag_ttl <= 0)
-			delete_frag(frag);	
+			delete_frag(frag);
 	}
 	/* mutex++ for frag_head */
 }
