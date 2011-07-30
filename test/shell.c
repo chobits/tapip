@@ -14,6 +14,7 @@
 extern void arpcache(int, char **);
 extern void netdebug(int, char **);
 extern void ifconfig(int, char **);
+extern void route(int, char **);
 
 static char *prompt = "[net shell]";
 static int quit;
@@ -40,6 +41,7 @@ static struct command cmds[] = {
 	/* net stack command */
 	{ CMD_NONUM, netdebug, "debug", "debug dev|l2|arp|ip|udp|tcp" },
 	{ 1, arpcache, "arpcache", "see arp cache" },
+	{ 1, route, "route", "show / manipulate the IP routing table" },
 	{ 1, ifconfig, "ifconfig", "configure a network interface" },
 	{ 0, NULL, NULL, NULL }	/* last one flag */
 };

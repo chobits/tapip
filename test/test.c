@@ -9,6 +9,7 @@
 #include "ether.h"
 #include "ip.h"
 #include "arp.h"
+#include "route.h"
 #include "lib.h"
 
 extern void test_shell(char *);
@@ -53,6 +54,7 @@ void net_stack_init(void)
 {
 	netdev_init();
 	arp_cache_init();
+	rt_init();
 }
 
 void net_stack_run(void)

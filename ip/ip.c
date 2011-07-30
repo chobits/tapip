@@ -67,7 +67,8 @@ void ip_send(struct rtentry *rt, struct pkbuf *pkb)
 		list_add_tail(&pkb->pk_list, &ae->ae_list);
 		arp_request(ae);
 	} else {
-		netdev_tx(rt->rt_dev, pkb, pkb->pk_len - ETH_HRD_SZ, ETH_P_IP, ae->ae_hwaddr);	
+		netdev_tx(rt->rt_dev, pkb, pkb->pk_len - ETH_HRD_SZ,
+						ETH_P_IP, ae->ae_hwaddr);
 	}
 }
 

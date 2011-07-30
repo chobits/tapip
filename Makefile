@@ -34,4 +34,5 @@ clean:
 	rm -f net_stack
 
 lines:
-	wc -l `find |grep "\.[ch]$$"`
+	@echo "code lines:"
+	@wc -l `find |grep "\.[ch]$$"`

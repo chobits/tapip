@@ -4,6 +4,7 @@
 #include "netif.h"
 #include "arp.h"
 #include "lib.h"
+#include "route.h"
 
 unsigned int net_debug = 0;
 
@@ -49,6 +50,11 @@ void netdebug(int argc, char **argv)
 void arpcache(int argc, char **argv)
 {
 	arp_cache_traverse();
+}
+
+void route(int argc, char **argv)
+{
+	rt_traverse();
 }
 
 void ifconfig(int argc, char **argv)
