@@ -1,5 +1,4 @@
 MAKEFLAGS += --no-print-directory
-vpath %.c net/:arp/:test/:lib/:ip/
 
 CC = gcc
 CFLAGS = -lpthread
@@ -14,15 +13,15 @@ all:net_stack
 net_stack:$(NET_STACK_OBJS)
 	$(CC) $(CFLAGS) $^ -o $@
 
-test/test_obj.o:shell.c test.c net_command.c
+test/test_obj.o:test/shell.c test/test.c test/net_command.c
 	@(cd test/; make)
-net/net_obj.o:net.c netdev.c tap.c
+net/net_obj.o:net/net.c net/netdev.c net/tap.c net/pkb.c
 	@(cd net/; make)
-arp/arp_obj.o:arp.c arp_cache.c
+arp/arp_obj.o:arp/arp.c arp/arp_cache.c
 	@(cd arp/; make)
-ip/ip_obj.o:ip.c route.c
+ip/ip_obj.o:ip/ip.c ip/route.c ip/ip_frag.c ip/icmp.c
 	@(cd ip/; make)
-lib/lib_obj.o:lib.c
+lib/lib_obj.o:lib/lib.c
 	@(cd lib/; make)
 
 clean:
@@ -35,4 +34,4 @@ clean:
 
 lines:
 	@echo "code lines:"
-	@wc -l `find |grep "\.[ch]$$"`
+	@wc -l `find |grep "\.[ch]$$"` | sort -n
