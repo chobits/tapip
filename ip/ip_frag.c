@@ -52,6 +52,7 @@ struct pkbuf *reass_frag(struct fragment *frag)
 	int hlen, dlen;
 
 	pkb = alloc_pkb(frag->frag_size + ETH_HRD_SZ);
+	pkb->pk_pro = ETH_P_IP;
 	p = pkb->pk_data;
 	/* copy ether header and ip header */
 	fragpkb = list_first_entry(&frag->frag_pkb, struct pkbuf, pk_list);
@@ -178,6 +179,7 @@ struct pkbuf *ip_frag(struct ip *orig, int hlen, int dlen, int off, unsigned sho
 	struct pkbuf *fragpkb;
 	struct ip *fraghdr;
 	fragpkb = alloc_pkb(ETH_HRD_SZ + hlen + dlen);
+	fragpkb->pk_pro = ETH_P_IP;
 	fraghdr = pkb2ip(fragpkb);
 	/* copy head */
 	memcpy(fraghdr, orig, hlen);

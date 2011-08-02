@@ -23,7 +23,6 @@ void arp_request(struct arpentry *ae)
 	struct ether *ehdr;
 	struct arp *ahdr;
 
-	arpdbg("+");
 	pkb = alloc_pkb(ETH_HRD_SZ + ARP_HRD_SZ);
 	ehdr = (struct ether *)pkb->pk_data;
 	ahdr = (struct arp *)ehdr->eth_data;
@@ -39,7 +38,6 @@ void arp_request(struct arpentry *ae)
 	ahdr->arp_tip = ae->ae_ipaddr;
 	hwacpy(ahdr->arp_tha, BRD_HWADDR);
 	netdev_tx(ae->ae_dev, pkb, pkb->pk_len - ETH_HRD_SZ, ETH_P_ARP, BRD_HWADDR);
-	arpdbg("-");
 }
 
 /*
