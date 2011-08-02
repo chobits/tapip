@@ -55,10 +55,17 @@ static inline void list_del(struct list_head *list)
 	((type *)((char *)(ptr) - (int)&((type *)0)->member))
 #define list_first_entry(head, type, member)\
 	list_entry((head)->next, type, member)
+#define list_last_entry(head, type, member)\
+	list_entry((head)->prev, type, member)
 
 #define list_for_each_entry(entry, head, member)\
 	for (entry = list_first_entry(head, typeof(*entry), member);\
 		&entry->member != (head);\
 		entry = list_first_entry(&entry->member, typeof(*entry), member))
+
+#define list_for_each_entry_reverse(entry, head, member)\
+	for (entry = list_last_entry(head, typeof(*entry), member);\
+		&entry->member != (head);\
+		entry = list_last_entry(&entry->member, typeof(*entry), member))
 
 #endif	/* list.h */
