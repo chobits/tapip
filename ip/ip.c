@@ -20,6 +20,12 @@ unsigned short ip_chksum(unsigned short *data, int size)
 	return ~sum & 0xffff;
 }
 
+void ip_setchksum(struct ip *iphdr)
+{
+	iphdr->ip_cksum = 0;
+	iphdr->ip_cksum = ip_chksum((unsigned short *)iphdr, iphlen(iphdr));
+}
+
 void ip_recv(struct pkbuf *pkb)
 {
 	struct ip *iphdr = pkb2ip(pkb);
@@ -40,49 +46,104 @@ void ip_recv(struct pkbuf *pkb)
 	/* pass to upper-level */
 	switch (iphdr->ip_pro) {
 	case IP_P_ICMP:
-		ipdbg("icmp");
-		/* pkbdbg(pkb); */
+		icmp_in(pkb);
 		break;
 	case IP_P_TCP:
+		free_pkb(pkb);
 		ipdbg("tcp");
 		break;
 	case IP_P_UDP:
+		free_pkb(pkb);
 		ipdbg("udp");
 		break;
 	default:
+		free_pkb(pkb);
 		ipdbg("unknown protocol");
 		break;
 	}
-	free_pkb(pkb);
 }
 
-void ip_send(struct rtentry *rt, struct pkbuf *pkb)
+void ip_send_dev(struct netdev *dev, struct pkbuf *pkb, unsigned int dst)
 {
 	struct arpentry *ae;
-	ae = arp_lookup(ETH_P_IP, rt->rt_ipaddr);
+	ae = arp_lookup(ETH_P_IP, dst);
 	if (!ae) {
+		ipdbg("not found arp entry");
 		ae = arp_alloc();
-		ae->ae_pro = rt->rt_ipaddr;
-		ae->ae_dev = rt->rt_dev;
+		if (!ae) {
+			ipdbg("arp cache is full");
+			free_pkb(pkb);
+			return;
+		}
+		ae->ae_ipaddr = dst;
+		ae->ae_dev = dev;
 		list_add_tail(&pkb->pk_list, &ae->ae_list);
 		arp_request(ae);
+	} else if (ae->ae_state == ARP_WAITING) {
+		ipdbg("arp entry is waiting");
+		list_add_tail(&pkb->pk_list, &ae->ae_list);
 	} else {
-		netdev_tx(rt->rt_dev, pkb, pkb->pk_len - ETH_HRD_SZ,
-						ETH_P_IP, ae->ae_hwaddr);
+		netdev_tx(dev, pkb, pkb->pk_len - ETH_HRD_SZ,
+				ETH_P_IP, ae->ae_hwaddr);
 	}
+}
+
+static unsigned short ipid = 0;
+
+/* pkb data is net-order */
+void ip_send(struct pkbuf *pkb, int fwd)
+{
+	struct ip *iphdr = pkb2ip(pkb);
+	struct rtentry *rt;
+
+	/* ip routing */
+	rt = rt_lookup(iphdr->ip_dst);
+	if (!rt) {
+		free_pkb(pkb);
+		/* FIXME: if (fwd) icmp dest unreachable */
+		return;
+	}
+	if (!fwd) {
+		iphdr->ip_src = rt->rt_dev->_net_ipaddr;
+		ip_setchksum(iphdr);
+	}
+	/* ip fragment */
+	if (ntohs(iphdr->ip_len) > rt->rt_dev->net_mtu)
+		ip_send_frag(rt->rt_dev, pkb, rt->rt_ipaddr);
+	else
+		ip_send_dev(rt->rt_dev, pkb, rt->rt_ipaddr);
+}
+
+void ip_send_info(struct pkbuf *pkb, unsigned char tos, unsigned short len,
+		unsigned char ttl, unsigned char pro, unsigned int dst)
+{
+	struct ip *iphdr = pkb2ip(pkb);
+	/* fill header information */
+	iphdr->ip_verlen = (IP_VERSION_4 << 4) | (IP_HRD_SZ / 4);
+	iphdr->ip_tos = tos;
+	iphdr->ip_len = htons(len);
+	iphdr->ip_id = htons(ipid++);
+	iphdr->ip_fragoff = 0;
+	iphdr->ip_ttl = ttl;
+	iphdr->ip_pro = pro;
+	iphdr->ip_dst = dst;
+
+	ip_send(pkb, 0);
 }
 
 void ip_forward(struct netdev *nd, struct pkbuf *pkb)
 {
 	struct ip *iphdr = pkb2ip(pkb);
 	struct rtentry *rt;
-	rt = rt_lookup(iphdr->ip_dst);
-	if (!rt) {
-		ipdbg("no route entry, drop packe");
+	ipdbg("");
+	if (iphdr->ip_ttl == 0) {
 		free_pkb(pkb);
-	} else {
-		ip_send(rt, pkb);
+		/* FIXME: icmp timeout */
+		return;
 	}
+	/* FIXME: ajacent checksum for decreased ttl */
+	ip_setchksum(iphdr);
+	ip_send(pkb, 1);
 }
 
 void ip_in(struct netdev *nd, struct pkbuf *pkb)
@@ -96,7 +157,7 @@ void ip_in(struct netdev *nd, struct pkbuf *pkb)
 		goto err_free_pkb;
 	}
 
-	if ((iphdr->ip_verlen >> 4) != IP_VERSION_4) {
+	if (ipver(iphdr) != IP_VERSION_4) {
 		ipdbg("ip packet is not version 4");
 		goto err_free_pkb;
 	}
@@ -121,6 +182,7 @@ void ip_in(struct netdev *nd, struct pkbuf *pkb)
 	ipdbg(IPFMT " -> " IPFMT "(%d/%d bytes)",
 				ipfmt(iphdr->ip_src), ipfmt(iphdr->ip_dst),
 				hlen, iphdr->ip_len);
+	iphdr->ip_ttl--;
 	/* Is this packet sent to us? */
 	if (iphdr->ip_dst != nd->_net_ipaddr) {
 		ip_hton(iphdr);

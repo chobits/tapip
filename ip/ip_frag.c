@@ -16,6 +16,10 @@ struct fragment *new_frag(struct ip *iphdr)
 {
 	struct fragment *frag;
 	frag = malloc(sizeof(*frag));
+	if (!frag) {
+		perror("malloc");
+		exit(EXIT_FAILURE);
+	}
 	frag->frag_ttl = 600;
 	frag->frag_id = iphdr->ip_id;
 	frag->frag_src = iphdr->ip_src;
@@ -50,29 +54,30 @@ struct pkbuf *reass_frag(struct fragment *frag)
 	pkb = alloc_pkb(frag->frag_size + ETH_HRD_SZ);
 	p = pkb->pk_data;
 	/* copy ether header and ip header */
-	pkb2ip(pkb)->ip_fragoff = 0;	/* clear fragment offset */
 	fragpkb = list_first_entry(&frag->frag_pkb, struct pkbuf, pk_list);
 	fraghdr = pkb2ip(fragpkb);
 	hlen = iphlen(fraghdr);
-
 	memcpy(p, fragpkb->pk_data, ETH_HRD_SZ + hlen);
-	p += ETH_HRD_SZ + hlen;
 
+	/* adjacent ip header */
+	pkb2ip(pkb)->ip_fragoff = 0;
+	pkb2ip(pkb)->ip_len = frag->frag_size;
+
+	p += ETH_HRD_SZ + hlen;
 	list_for_each_entry(fragpkb, &frag->frag_pkb, pk_list) {
 		fraghdr = pkb2ip(fragpkb);
 		memcpy(p, (char *)fraghdr + hlen, fraghdr->ip_len - hlen);
 		p += fraghdr->ip_len - hlen;
 	}
+	ipdbg("resassembly success(%d/%d bytes)", hlen, frag->frag_size);
 	delete_frag(frag);
-	ipdbg("resassembly success!");
 	return pkb;
 }
 
-/* FIXME: rewrite */
 int insert_frag(struct pkbuf *pkb, struct fragment *frag)
 {
 	struct pkbuf *fragpkb;
-	struct ip *iphdr, *fraghdr, *prevhdr;
+	struct ip *iphdr, *fraghdr;
 	struct list_head *pos;
 	int off, hlen;
 
@@ -94,23 +99,19 @@ int insert_frag(struct pkbuf *pkb, struct fragment *frag)
 
 	/* normal fragment */
 	pos = &frag->frag_pkb;
-	prevhdr = NULL;
-
-	list_for_each_entry(fragpkb, &frag->frag_pkb, pk_list) {
+	/* find the first fraghdr, in which case fraghdr off < iphdr off */
+	list_for_each_entry_reverse(fragpkb, &frag->frag_pkb, pk_list) {
 		fraghdr = pkb2ip(fragpkb);
-		if (ipoff(fraghdr) == off) {
+		if (off == ipoff(fraghdr)) {
 			ipdbg("reduplicate ip fragment");
 			goto frag_drop;
 		}
-		/* prevhdr < iphdr < fraghdr */
-		if (off < ipoff(fraghdr)) {
-			pos = fragpkb->pk_list.prev;
+		if (off > ipoff(fraghdr)) {
+			pos = &fragpkb->pk_list;
 			goto frag_found;
 		}
-		prevhdr = fraghdr;
 	}
-
-	/* not found: pkb is the current max-offset fragment */
+	/* not found: pkb is the current min-offset fragment */
 	fraghdr = NULL;
 
 frag_found:
@@ -119,13 +120,9 @@ frag_found:
 		ipdbg("error ip fragment");
 		goto frag_drop;
 	}
-	/* iphdr end < fraghdr */
-	if (fraghdr && off + iphdr->ip_len - hlen > ipoff(fraghdr)) {
-		ipdbg("error ip fragment");
-		goto frag_drop;
-	}
-	/* prevhdr end < iphdr */
-	if (prevhdr && ipoff(prevhdr) + iphdr->ip_len - hlen > off) {
+
+	/* error: fraghdr off > iphdr off */
+	if (fraghdr && ipoff(fraghdr) + fraghdr->ip_len - hlen > off) {
 		ipdbg("error ip fragment");
 		goto frag_drop;
 	}
@@ -174,6 +171,50 @@ struct pkbuf *ip_reass(struct pkbuf *pkb)
 		pkb = NULL;
 
 	return pkb;
+}
+
+struct pkbuf *ip_frag(struct ip *orig, int hlen, int dlen, int off, unsigned short mf_bit)
+{
+	struct pkbuf *fragpkb;
+	struct ip *fraghdr;
+	fragpkb = alloc_pkb(ETH_HRD_SZ + hlen + dlen);
+	fraghdr = pkb2ip(fragpkb);
+	/* copy head */
+	memcpy(fraghdr, orig, hlen);
+	/* copy data */
+	memcpy((void *)fraghdr + hlen, (void *)orig + hlen + off, dlen);
+	/* adjacent the head */
+	fraghdr->ip_len = htons(hlen + dlen);
+	mf_bit |= (off >> 3);
+	fraghdr->ip_fragoff = htons(mf_bit);
+	ip_setchksum(fraghdr);
+	return fragpkb;
+}
+
+void ip_send_frag(struct netdev *dev, struct pkbuf *pkb, unsigned int dst)
+{
+	struct pkbuf *fragpkb;
+	struct ip *fraghdr, *iphdr;
+	int dlen, hlen, fraglen, off;
+	iphdr = pkb2ip(pkb);
+	hlen = iphlen(iphdr);
+	dlen = ntohs(iphdr->ip_len) - hlen;
+	off = 0;
+	while (dlen > dev->net_mtu - hlen) {
+		ipdbg(" [f] ip frag: off %d hlen %d dlen %d", off, hlen, dev->net_mtu - hlen);
+		fragpkb = ip_frag(iphdr, hlen, dev->net_mtu - hlen, off, IP_FRAG_MF);
+		ip_send_dev(dev, fragpkb, dst);
+
+		dlen -= dev->net_mtu - hlen;
+		off += dev->net_mtu - hlen;
+	}
+
+	if (dlen) {
+		ipdbg(" [f] ip frag: off %d hlen %d dlen %d", off, hlen, dlen);
+		fragpkb = ip_frag(iphdr, hlen, dlen, off, iphdr->ip_fragoff & IP_FRAG_MF);
+		ip_send_dev(dev, fragpkb, dst);
+	}
+	free_pkb(pkb);
 }
 
 /* FIXME: ip_timer test */

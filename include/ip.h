@@ -2,6 +2,7 @@
 #define __IP_H
 
 #include "netif.h"
+#include "ether.h"
 #include "list.h"
 
 /* IP Packet Format */
@@ -38,6 +39,7 @@ struct ip {
 
 #define IP_HRD_SZ sizeof(struct ip)
 
+#define ipver(ip) ((ip)->ip_verlen >> 4)
 #define iphlen(ip) (((ip)->ip_verlen & 0xf) * 4)
 #define ipoff(ip) ((((ip)->ip_fragoff) & IP_FRAG_OFF) * 8)
 #define pkb2ip(pkb) ((struct ip *)((pkb)->pk_data + ETH_HRD_SZ))
