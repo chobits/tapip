@@ -74,6 +74,7 @@ extern void arp_proc(int);
 
 extern struct arpentry *arp_alloc(void);
 extern struct arpentry *arp_lookup(unsigned short, unsigned int);
+extern struct arpentry *arp_lookup_resolv(unsigned short, unsigned int);
 extern int arp_insert(struct netdev *, unsigned short, unsigned int, unsigned char *);
 
 #endif	/* arp.h */

@@ -55,6 +55,7 @@ int arp_insert(struct netdev *nd, unsigned short pro,
 struct arpentry *arp_lookup(unsigned short pro, unsigned int ipaddr)
 {
 	int i;
+	arpdbg("pro:%d "IPFMT, pro, ipfmt(ipaddr));
 	for (i = 0; i < ARP_CACHE_SZ; i++) {
 		if (arp_cache[i].ae_state == ARP_FREE)
 			continue;
@@ -62,6 +63,15 @@ struct arpentry *arp_lookup(unsigned short pro, unsigned int ipaddr)
 			arp_cache[i].ae_ipaddr == ipaddr)
 			return &arp_cache[i];
 	}
+	return NULL;
+}
+
+struct arpentry *arp_lookup_resolv(unsigned short pro, unsigned int ipaddr)
+{
+	struct arpentry *ae;
+	ae = arp_lookup(pro, ipaddr);
+	if (ae && ae->ae_pro == ARP_RESOLVED)
+		return ae;
 	return NULL;
 }
 
