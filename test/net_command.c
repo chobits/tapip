@@ -29,12 +29,14 @@ void netdebug(int argc, char **argv)
 			net_debug |= NET_DEBUG_ARP;
 		} else if (strcmp(argv[argc], "ip") == 0) {
 			net_debug |= NET_DEBUG_IP;
+		} else if (strcmp(argv[argc], "icmp") == 0) {
+			net_debug |= NET_DEBUG_ICMP;
 		} else if (strcmp(argv[argc], "udp") == 0) {
 			net_debug |= NET_DEBUG_UDP;
 		} else if (strcmp(argv[argc], "tcp") == 0) {
 			net_debug |= NET_DEBUG_TCP;
 		} else {
-			ferr("Usage: debug (dev|l2|arp|ip|udp|tcp)+\n");
+			ferr("Usage: debug (dev|l2|arp|ip|icmp|udp|tcp)+\n");
 			return;
 		}
 	} while (argc > 1);

@@ -39,7 +39,7 @@ static struct command cmds[] = {
 	{ CMD_NONUM, builtin_help, "help", "display shell command information" },
 	{ CMD_NONUM, builtin_exit, "exit", "exit shell" },
 	/* net stack command */
-	{ CMD_NONUM, netdebug, "debug", "debug dev|l2|arp|ip|udp|tcp" },
+	{ CMD_NONUM, netdebug, "debug", "debug dev|l2|arp|ip|icmp|udp|tcp" },
 	{ 1, arpcache, "arpcache", "see arp cache" },
 	{ 1, route, "route", "show / manipulate the IP routing table" },
 	{ 1, ifconfig, "ifconfig", "configure a network interface" },

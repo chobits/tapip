@@ -72,7 +72,7 @@ void netdev_send(struct netdev *nd, struct pkbuf *pkb, int len)
 	int l;
 	l = write(nd->net_fd, pkb->pk_data, len);
 	if (l != len) {
-		perror("write net dev");
+		dbg("write net dev");
 		nd->net_stats.tx_errors++;
 	} else {
 		nd->net_stats.tx_packets++;

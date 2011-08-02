@@ -64,8 +64,6 @@ extern void netdev_fillinfo(struct netdev *nd);
 extern void netdev_send(struct netdev *nd, struct pkbuf *pkb, int len);
 extern int netdev_recv(struct netdev *nd, struct pkbuf *pkb);
 extern void netdev_poll(struct netdev *nd);
-extern void netdev_tx(struct netdev *nd, struct pkbuf *pkb, int len,
-				unsigned short proto, unsigned char *dst);
 
 extern void net_timer(void);
 extern void netdev_interrupt(void);
@@ -73,9 +71,17 @@ extern void netdev_interrupt(void);
 extern struct pkbuf *alloc_pkb(int size);
 extern struct pkbuf *alloc_netdev_pkb(struct netdev *nd);
 extern void pkbdbg(struct pkbuf *pkb);
-
+//#define DEBUG_PKB
 #ifdef DEBUG_PKB
 extern void _free_pkb(struct pkbuf *pkb);
+extern void _netdev_tx(struct netdev *nd, struct pkbuf *pkb, int len,
+				unsigned short proto, unsigned char *dst);
+#define netdev_tx(nd, pkb, len, proto, dst)\
+do {\
+	dbg("");\
+	_netdev_tx(nd, pkb, len, proto, dst);\
+} while (0)
+
 #define free_pkb(pkb)\
 do {\
 	dbg("");\
@@ -83,6 +89,8 @@ do {\
 } while (0)
 #else
 extern void free_pkb(struct pkbuf *pkb);
+extern void netdev_tx(struct netdev *nd, struct pkbuf *pkb, int len,
+				unsigned short proto, unsigned char *dst);
 #endif
 
 #endif	/* netif.h */

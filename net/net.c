@@ -70,14 +70,26 @@ void netdev_rx(struct netdev *nd)
 	 */
 }
 
+#ifdef DEBUG_PKB
+void _netdev_tx(struct netdev *nd, struct pkbuf *pkb, int len,
+		unsigned short proto, unsigned char *dst)
+#else
 void netdev_tx(struct netdev *nd, struct pkbuf *pkb, int len,
 		unsigned short proto, unsigned char *dst)
+#endif
 {
 	struct ether *ehdr = (struct ether *)pkb->pk_data;
+
 	/* first copy to eth_dst, maybe eth_src will be copied to eth_dst */
 	hwacpy(ehdr->eth_dst, dst);
 	hwacpy(ehdr->eth_src, nd->_net_hwaddr);
 	ehdr->eth_pro = htons(proto);
+
+	l2dbg(MACFMT " -> " MACFMT "(%s)",
+				macfmt(ehdr->eth_src),
+				macfmt(ehdr->eth_dst),
+				ethpro(proto));
+
 	netdev_send(nd, pkb, len + sizeof(struct ether));
 	free_pkb(pkb);
 }
@@ -112,7 +124,7 @@ void net_in(struct netdev *nd, struct pkbuf *pkb)
 		ip_in(nd, pkb);
 		break;
 	default:
-		dbg("unkown ether packet type");
+//		dbg("unkown ether packet type");
 		break;
 	}
 }
