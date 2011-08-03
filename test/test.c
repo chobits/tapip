@@ -16,30 +16,6 @@ extern void test_shell(char *);
 
 static pthread_t threads[2];
 
-/*
- * this func will not be used, we use multi-thread model insteal of multi-process
- */
-int newproc(void *(*proc)(void), int notty)
-{
-	int pid;
-	pid = fork();
-	if (pid < 0) {
-		perror("fork");
-		exit(EXIT_FAILURE);
-	} else if (pid == 0) {		/* child */
-		/* new process has no controlling tty */
-		if (notty && setsid() == -1) {
-			perror("setsid");
-			exit(EXIT_FAILURE);
-		}
-		close(0);		/* kill stdin */
-		proc();
-		exit(0);
-	}
-	/* return child pid, and parent runs continuely */
-	return pid;
-}
-
 typedef void *(*pfunc_t)(void *);
 
 int newthread(pfunc_t thread_func)
