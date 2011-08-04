@@ -15,3 +15,13 @@
 	(waiting debug information)
 
 (tom)	tom # ping 10.0.0.1
+
+================================================
+3. test ip forward:
+
+(bob)	bob # sudo route add -net 10.0.1.0 netmask 255.255.255.0 gw 10.0.0.1
+	bob # sudo ./net_stack
+	[net shell]: debug ip
+	(waiting debug information)
+
+(tom)	tom # ping 10.0.1.1
