@@ -23,14 +23,16 @@
 #define IP_P_UDP	17
 #define IP_P_OSPF	89
 
+/* default: host order is little-endian */
 struct ip {
-	unsigned char ip_verlen;	/* vertion(4bit), iphdr length(4bit) */
+	unsigned char	ip_hlen:4,	/* header length */
+			ip_ver:4;	/* version */
 	unsigned char ip_tos;		/* type of service */
-	unsigned short ip_len;		/* total ip packet data lenth */
+	unsigned short ip_len;		/* total ip packet data length */
 	unsigned short ip_id;		/* datagram id */
 	unsigned short ip_fragoff;	/* fragment offset(in 8-octet's) */
 	unsigned char ip_ttl;		/* time to live, in gateway hops */
-	unsigned char ip_pro;		/* IP protocol */
+	unsigned char ip_pro;		/* L4 protocol */
 	unsigned short ip_cksum;	/* header checksum */
 	unsigned int ip_src;		/* source address */
 	unsigned int ip_dst;		/* dest address */
@@ -39,8 +41,8 @@ struct ip {
 
 #define IP_HRD_SZ sizeof(struct ip)
 
-#define ipver(ip) ((ip)->ip_verlen >> 4)
-#define iphlen(ip) (((ip)->ip_verlen & 0xf) * 4)
+#define ipver(ip) ((ip)->ip_ver)
+#define iphlen(ip) ((ip)->ip_hlen << 2)
 #define ipoff(ip) ((((ip)->ip_fragoff) & IP_FRAG_OFF) * 8)
 #define pkb2ip(pkb) ((struct ip *)((pkb)->pk_data + ETH_HRD_SZ))
 
