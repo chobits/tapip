@@ -103,7 +103,7 @@ void net_in(struct netdev *nd, struct pkbuf *pkb)
 	len = pkb->pk_len;
 	if (pkb->pk_len < ETH_HRD_SZ) {
 		free_pkb(pkb);
-		dbg("received packet is too small:%d bytes"), pkb->pk_len;
+		dbg("received packet is too small:%d bytes", pkb->pk_len);
 		return;
 	}
 	proto = ntohs(ehdr->eth_pro);
