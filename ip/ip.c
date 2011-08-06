@@ -95,23 +95,34 @@ void ip_send(struct pkbuf *pkb, int fwd)
 {
 	struct ip *iphdr = pkb2ip(pkb);
 	struct rtentry *rt;
+	unsigned int dst;
 
+	ipdbg(IPFMT " -> " IPFMT "(%d/%d bytes) %s",
+				ipfmt(iphdr->ip_src), ipfmt(iphdr->ip_dst),
+				iphlen(iphdr), ntohs(iphdr->ip_len),
+				fwd ? "forwarding" : "");
 	/* ip routing */
 	rt = rt_lookup(iphdr->ip_dst);
 	if (!rt) {
+		ipdbg("No route entry");
 		free_pkb(pkb);
 		/* FIXME: if (fwd) icmp dest unreachable */
 		return;
 	}
+	if (rt->rt_net == 0 || rt->rt_metric > 0)	/* default route or remote dst */
+		dst = rt->rt_gw;
+	else
+		dst = iphdr->ip_dst;
+	ipdbg("routing to next-hop: " IPFMT, ipfmt(dst));
 	if (!fwd) {
 		iphdr->ip_src = rt->rt_dev->_net_ipaddr;
 		ip_setchksum(iphdr);
 	}
 	/* ip fragment */
 	if (ntohs(iphdr->ip_len) > rt->rt_dev->net_mtu)
-		ip_send_frag(rt->rt_dev, pkb, rt->rt_ipaddr);
+		ip_send_frag(rt->rt_dev, pkb, dst);
 	else
-		ip_send_dev(rt->rt_dev, pkb, rt->rt_ipaddr);
+		ip_send_dev(rt->rt_dev, pkb, dst);
 }
 
 void ip_send_info(struct pkbuf *pkb, unsigned char tos, unsigned short len,
@@ -119,7 +130,8 @@ void ip_send_info(struct pkbuf *pkb, unsigned char tos, unsigned short len,
 {
 	struct ip *iphdr = pkb2ip(pkb);
 	/* fill header information */
-	iphdr->ip_verlen = (IP_VERSION_4 << 4) | (IP_HRD_SZ / 4);
+	iphdr->ip_ver = IP_VERSION_4;
+	iphdr->ip_hlen = IP_HRD_SZ / 4;
 	iphdr->ip_tos = tos;
 	iphdr->ip_len = htons(len);
 	iphdr->ip_id = htons(ipid++);
@@ -135,7 +147,6 @@ void ip_forward(struct netdev *nd, struct pkbuf *pkb)
 {
 	struct ip *iphdr = pkb2ip(pkb);
 	struct rtentry *rt;
-	ipdbg("");
 	if (iphdr->ip_ttl == 0) {
 		free_pkb(pkb);
 		/* FIXME: icmp timeout */
@@ -152,6 +163,7 @@ void ip_in(struct netdev *nd, struct pkbuf *pkb)
 	struct ip *iphdr = (struct ip *)ehdr->eth_data;
 	int hlen;
 
+	/* Fussy sanity check */
 	if (pkb->pk_len < ETH_HRD_SZ + IP_HRD_SZ) {
 		ipdbg("ip packet is too small");
 		goto err_free_pkb;
@@ -174,11 +186,16 @@ void ip_in(struct netdev *nd, struct pkbuf *pkb)
 	}
 
 	ip_ntoh(iphdr);
-	if (iphdr->ip_len < hlen) {
+	if (iphdr->ip_len < hlen ||
+		pkb->pk_len < ETH_HRD_SZ + iphdr->ip_len) {
 		ipdbg("ip size is unknown");
 		goto err_free_pkb;
 	}
 
+	if (pkb->pk_len > ETH_HRD_SZ + iphdr->ip_len)
+		pkb_trim(pkb, ETH_HRD_SZ + iphdr->ip_len);
+
+	/* Now, we can take care of the main ip processing safely. */
 	ipdbg(IPFMT " -> " IPFMT "(%d/%d bytes)",
 				ipfmt(iphdr->ip_src), ipfmt(iphdr->ip_dst),
 				hlen, iphdr->ip_len);

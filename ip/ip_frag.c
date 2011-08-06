@@ -15,11 +15,7 @@ static inline int full_frag(struct fragment *frag)
 struct fragment *new_frag(struct ip *iphdr)
 {
 	struct fragment *frag;
-	frag = malloc(sizeof(*frag));
-	if (!frag) {
-		perror("malloc");
-		exit(EXIT_FAILURE);
-	}
+	frag = xmalloc(sizeof(*frag));
 	frag->frag_ttl = 600;
 	frag->frag_id = iphdr->ip_id;
 	frag->frag_src = iphdr->ip_src;
@@ -197,18 +193,21 @@ void ip_send_frag(struct netdev *dev, struct pkbuf *pkb, unsigned int dst)
 {
 	struct pkbuf *fragpkb;
 	struct ip *fraghdr, *iphdr;
-	int dlen, hlen, fraglen, off;
+	int dlen, hlen, mlen, fraglen, off;
+
 	iphdr = pkb2ip(pkb);
 	hlen = iphlen(iphdr);
 	dlen = ntohs(iphdr->ip_len) - hlen;
+	mlen = (dev->net_mtu - hlen) & ~7;	/* max length */
 	off = 0;
-	while (dlen > dev->net_mtu - hlen) {
-		ipdbg(" [f] ip frag: off %d hlen %d dlen %d", off, hlen, dev->net_mtu - hlen);
-		fragpkb = ip_frag(iphdr, hlen, dev->net_mtu - hlen, off, IP_FRAG_MF);
+
+	while (dlen > mlen) {
+		ipdbg(" [f] ip frag: off %d hlen %d dlen %d", off, hlen, mlen);
+		fragpkb = ip_frag(iphdr, hlen, mlen, off, IP_FRAG_MF);
 		ip_send_dev(dev, fragpkb, dst);
 
-		dlen -= dev->net_mtu - hlen;
-		off += dev->net_mtu - hlen;
+		dlen -= mlen;
+		off += mlen;
 	}
 
 	if (dlen) {
