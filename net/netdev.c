@@ -25,11 +25,7 @@
 struct netdev *netdev_alloc(char *dev)
 {
 	struct netdev *nd;
-	nd = malloc(sizeof(*nd));
-	if (nd == NULL) {
-		perror("malloc");
-		goto err_malloc;
-	}
+	nd = xmalloc(sizeof(*nd));
 
 	/* create virtual device: tap */
 	nd->net_fd = alloc_tap(dev);
@@ -45,7 +41,6 @@ struct netdev *netdev_alloc(char *dev)
 	return nd;
 err_alloc_tap:
 	free(nd);
-err_malloc:
 	return NULL;
 }
 
@@ -57,6 +52,7 @@ void netdev_free(struct netdev *nd)
 }
 
 #define FAKE_TAP_ADDR 0x0200000a	/* 10.0.0.2 */
+#define FAKE_TAP_NETMASK 0x00ffffff	/* 255.255.255.0 */
 void netdev_fillinfo(struct netdev *nd)
 {
 	getname_tap(nd->net_fd, nd->net_name);
@@ -64,6 +60,7 @@ void netdev_fillinfo(struct netdev *nd)
 	getmtu_tap(nd->net_name, &nd->net_mtu);
 	setipaddr_tap(nd->net_name, FAKE_TAP_ADDR);
 	getipaddr_tap(nd->net_name, &nd->net_ipaddr);
+	setnetmask_tap(nd->net_name, FAKE_TAP_NETMASK);
 	setup_tap(nd->net_name);
 }
 
@@ -110,10 +107,8 @@ void netdev_poll(struct netdev *nd)
 
 		/* one event, infinite time */
 		ret = poll(&pfd, 1, -1);
-		if (ret <= 0) {
-			perror("poll /dev/net/tun");
-			exit(EXIT_FAILURE);
-		}
+		if (ret <= 0)
+			perrx("poll /dev/net/tun");
 		/* get a packet */
 		netdev_rx(nd);
 	}

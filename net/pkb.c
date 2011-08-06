@@ -5,14 +5,18 @@
 #include "ether.h"
 #include "lib.h"
 
+/* referred from linux-2.6: handing packet l2 padding */
+void pkb_trim(struct pkbuf *pkb, int len)
+{
+	pkb->pk_len = len;
+	if (realloc(pkb, sizeof(*pkb) + len) == NULL)
+		perrx("realloc");
+}
+
 struct pkbuf *alloc_pkb(int size)
 {
 	struct pkbuf *pkb;
-	pkb = malloc(sizeof(*pkb) + size);
-	if (!pkb) {
-		perror("malloc");
-		exit(EXIT_FAILURE);
-	}
+	pkb = xmalloc(sizeof(*pkb) + size);
 	pkb->pk_len = size;
 	pkb->pk_pro = 0xffff;
 	list_init(&pkb->pk_list);

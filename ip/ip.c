@@ -147,7 +147,7 @@ void ip_forward(struct netdev *nd, struct pkbuf *pkb)
 {
 	struct ip *iphdr = pkb2ip(pkb);
 	struct rtentry *rt;
-	if (iphdr->ip_ttl == 0) {
+	if (--iphdr->ip_ttl <= 0) {
 		free_pkb(pkb);
 		/* FIXME: icmp timeout */
 		return;
@@ -199,7 +199,6 @@ void ip_in(struct netdev *nd, struct pkbuf *pkb)
 	ipdbg(IPFMT " -> " IPFMT "(%d/%d bytes)",
 				ipfmt(iphdr->ip_src), ipfmt(iphdr->ip_dst),
 				hlen, iphdr->ip_len);
-	iphdr->ip_ttl--;
 	/* Is this packet sent to us? */
 	if (iphdr->ip_dst != nd->_net_ipaddr) {
 		ip_hton(iphdr);

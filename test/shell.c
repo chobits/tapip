@@ -61,10 +61,8 @@ static int get_line(char *buf, int bufsz)
 	int len;
 	p = fgets(buf, bufsz - 1, stdin);
 	if (!p) {
-		if (errno) {
-			perror("fgets");
-			exit(EXIT_FAILURE);
-		}
+		if (errno)
+			perrx("fgets");
 		/* EOF (Ctrl + D) */
 		printf("exit\n");
 		strcpy(buf, "exit");
@@ -158,19 +156,15 @@ static void signal_init(void)
 	memset(&act, 0x0, sizeof(act));
 	act.sa_flags = SA_RESTART;
 	act.sa_sigaction = signal_int;
-	if ((sigaction(SIGINT, &act, NULL)) == -1) {
-		perror("sigaction");
-		exit(EXIT_FAILURE);
-	}
+	if ((sigaction(SIGINT, &act, NULL)) == -1)
+		perrx("sigaction SIGINT");
 
 	/* quit signal */
 	memset(&act, 0x0, sizeof(act));
 	act.sa_flags = SA_RESTART;
 	act.sa_sigaction = signal_int;
-	if ((sigaction(SIGQUIT, &act, NULL)) == -1) {
-		perror("sigaction");
-		exit(EXIT_FAILURE);
-	}
+	if ((sigaction(SIGQUIT, &act, NULL)) == -1)
+		perrx("sigaction SIGOUT");
 }
 
 void test_shell(char *prompt_str)

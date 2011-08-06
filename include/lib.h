@@ -69,5 +69,6 @@ do {\
 #define NET_DEBUG_TCP	0x00000040
 
 extern unsigned int net_debug;
+extern void *xmalloc(int);
 
 #endif	/* lib.h */

@@ -14,6 +14,14 @@ void perrx(char *str)
 	exit(EXIT_FAILURE);
 }
 
+void *xmalloc(int size)
+{
+	void *p = malloc(size);
+	if (!p)
+		perrx("malloc");
+	return p;
+}
+
 /* format and print mlen-max-size data (spaces will fill the buf) */
 static char *_space = "                                              ";
 void printfs(int mlen, const char *fmt, ...)

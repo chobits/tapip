@@ -17,6 +17,28 @@
 
 #define TUNTAPDEV "/dev/net/tun"
 
+void setnetmask_tap(char *name, unsigned int netmask)
+{
+	struct ifreq ifr = {};
+	struct sockaddr_in *saddr;
+	int skfd;
+
+	skfd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+	if (skfd < 0)
+		perrx("socket PF_INET");
+
+	strcpy(ifr.ifr_name, name);
+	saddr = (struct sockaddr_in *)&ifr.ifr_netmask;
+	saddr->sin_family = AF_INET;
+	saddr->sin_addr.s_addr = netmask;
+	if (ioctl(skfd, SIOCSIFNETMASK, (void *)&ifr) < 0) {
+		close(skfd);
+		perrx("socket SIOCSIFNETMASK");
+	}
+	close(skfd);
+	dbg("set Netmask: "IPFMT, ipfmt(netmask));
+}
+
 void setflags_tap(char *name, unsigned short flags, int set)
 {
 	struct ifreq ifr = {};
@@ -85,10 +107,10 @@ void setipaddr_tap(char *name, unsigned int ipaddr)
 	skfd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
 	if (skfd < 0)
 		perrx("socket");
-	
+
 	strcpy(ifr.ifr_name, name);
 	saddr = (struct sockaddr_in *)&ifr.ifr_addr;
-	saddr->sin_family = AF_INET;	
+	saddr->sin_family = AF_INET;
 	saddr->sin_addr.s_addr = ipaddr;
 	if (ioctl(skfd, SIOCSIFADDR, (void *)&ifr) < 0) {
 		close(skfd);
