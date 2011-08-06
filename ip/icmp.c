@@ -17,7 +17,7 @@ void icmp_in(struct pkbuf *pkb)
 	int icmplen;
 
 	icmplen = iphdr->ip_len - iphlen(iphdr);
-	icmpdbg("%d", icmplen);
+	icmpdbg("%d bytes", icmplen);
 	if (icmplen < ICMP_HRD_SZ) {
 		icmpdbg("icmp header is too small");
 		free_pkb(pkb);
@@ -31,7 +31,7 @@ void icmp_in(struct pkbuf *pkb)
 	}
 	switch (icmphdr->icmp_type) {
 	case ICMP_T_ECHOREQ:
-		icmpdbg("echo request");
+		icmpdbg("echo request data %d bytes", icmplen - ICMP_HRD_SZ - 4);
 		if (icmphdr->icmp_code) {
 			icmpdbg("echo request packet corrupted");
 			free_pkb(pkb);
