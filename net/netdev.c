@@ -20,6 +20,7 @@
 #include "ether.h"
 #include "lib.h"
 #include "list.h"
+#include "netcfg.h"
 
 /* Altough dev is already created, this function is safe! */
 struct netdev *netdev_alloc(char *dev)
@@ -51,8 +52,6 @@ void netdev_free(struct netdev *nd)
 	free(nd);
 }
 
-#define FAKE_TAP_ADDR 0x0200000a	/* 10.0.0.2 */
-#define FAKE_TAP_NETMASK 0x00ffffff	/* 255.255.255.0 */
 void netdev_fillinfo(struct netdev *nd)
 {
 	getname_tap(nd->net_fd, nd->net_name);

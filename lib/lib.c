@@ -36,3 +36,17 @@ void printfs(int mlen, const char *fmt, ...)
 	if (mlen > slen)
 		printf("%.*s", mlen - slen, _space);
 }
+
+int str2ip(char *str, unsigned int *ip)
+{
+	int a, b, c, d;
+	if (sscanf(str, "%d.%d.%d.%d", &a, &b, &c, &d) != 4)
+		return -1;
+	if ((a < 0 || a > 255) ||
+		(b < 0 || b > 255) ||
+		(c < 0 || c > 255) ||
+		(d < 0 || d > 255))
+		return -1;
+	*ip = a | (b << 8) | (c << 16) | (d << 24);
+	return 0;
+}

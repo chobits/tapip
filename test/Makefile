@@ -4,6 +4,7 @@ CFLAGS = -I../include
 
 OBJS	=	test.o		\
 		net_command.o	\
+		ping_command.o	\
 		shell.o
 
 all:test_obj.o
@@ -12,6 +13,8 @@ test_obj.o:$(OBJS)
 test.o:test.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 net_command.o:net_command.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+ping_command.o:ping_command.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 shell.o:shell.c
 	$(CC) $(CFLAGS) -c -o $@ $<

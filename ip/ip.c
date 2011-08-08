@@ -5,6 +5,7 @@
 #include "route.h"
 
 #include "lib.h"
+#include "netcfg.h"
 
 unsigned short ip_chksum(unsigned short *data, int size)
 {
@@ -90,7 +91,7 @@ void ip_send_dev(struct netdev *dev, struct pkbuf *pkb, unsigned int dst)
 
 static unsigned short ipid = 0;
 
-/* pkb data is net-order */
+/* assert: pkb data is net-order & pkb->pk_pro == ETH_P_IP */
 void ip_send(struct pkbuf *pkb, int fwd)
 {
 	struct ip *iphdr = pkb2ip(pkb);
@@ -129,6 +130,7 @@ void ip_send_info(struct pkbuf *pkb, unsigned char tos, unsigned short len,
 		unsigned char ttl, unsigned char pro, unsigned int dst)
 {
 	struct ip *iphdr = pkb2ip(pkb);
+	pkb->pk_pro = ETH_P_IP;
 	/* fill header information */
 	iphdr->ip_ver = IP_VERSION_4;
 	iphdr->ip_hlen = IP_HRD_SZ / 4;
@@ -147,6 +149,11 @@ void ip_forward(struct netdev *nd, struct pkbuf *pkb)
 {
 	struct ip *iphdr = pkb2ip(pkb);
 	struct rtentry *rt;
+#ifdef CONFIG_TOP1
+	ipdbg("host doesnt support forward!");
+	free_pkb(pkb);
+	return;
+#endif
 	if (--iphdr->ip_ttl <= 0) {
 		free_pkb(pkb);
 		/* FIXME: icmp timeout */

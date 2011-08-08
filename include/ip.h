@@ -71,5 +71,6 @@ struct fragment {
 };
 
 extern struct pkbuf *ip_reass(struct pkbuf *);
+#define MULTICAST(netip) ((0x000000f0 & (netip)) == 0x000000e0)
 
 #endif	/* ip */

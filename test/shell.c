@@ -15,6 +15,7 @@ extern void arpcache(int, char **);
 extern void netdebug(int, char **);
 extern void ifconfig(int, char **);
 extern void route(int, char **);
+extern void ping(int, char **);
 
 static char *prompt = "[net shell]";
 static int quit;
@@ -40,6 +41,7 @@ static struct command cmds[] = {
 	{ CMD_NONUM, builtin_exit, "exit", "exit shell" },
 	/* net stack command */
 	{ CMD_NONUM, netdebug, "debug", "debug dev|l2|arp|ip|icmp|udp|tcp" },
+	{ CMD_NONUM, ping, "ping", "ping [OPTIONS] ipaddr" },
 	{ 1, arpcache, "arpcache", "see arp cache" },
 	{ 1, route, "route", "show / manipulate the IP routing table" },
 	{ 1, ifconfig, "ifconfig", "configure a network interface" },

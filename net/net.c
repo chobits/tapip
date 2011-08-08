@@ -18,11 +18,10 @@
 #include "ether.h"
 #include "ip.h"
 #include "lib.h"
+#include "netcfg.h"
 
 extern void net_in(struct netdev *, struct pkbuf *);
 struct netdev *veth;	/* virtual ethernet card device */
-#define FAKE_IPADDR 0x0100000a	/* 10.0.0.1 */
-#define FAKE_HWADDR "\x12\x34\x45\x67\x89\xab"
 
 void netdev_interrupt(void)
 {

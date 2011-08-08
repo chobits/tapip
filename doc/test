@@ -1,3 +1,18 @@
++ TOP1:
+================================================
+1. test icmp and ip fragment/defragment:
+ # sudo ./net_stack
+ # ping 10.20.133.20
+    (ping gateway, and see debug informantion)
+ # ping -s 60000 10.20.133.2
+    (ping some user via 60000-bytes icmp data)
+
+
+
+
++ TOP2:
+(bob 10.0.0.1 ./net_stack)
+(tom 10.0.0.2  veth0)
 ================================================
 1. test arp:
 
@@ -5,19 +20,31 @@
 (bob)	[net shell]: debug arp
 	(waiting debug information)
 
-(tom)	tom # sudo arping 10.0.0.1 -I eth0
+(tom)	tom # sudo route add -net 10.0.0.0 netmask 255.255.255 veth0
+	tom # sudo arping 10.0.0.1 -I veth0
 
 ================================================
-2. test ip:
+2. test ip(veth0 -> ./net_stack):
+
+(tom)	tom # sudo tcpdump -vvv -i eth0
+	(waiting debug information)
 
 (bob)	bob # sudo ./net_stack
-(bob)	[net shell]: debug ip
-	(waiting debug information)
+(bob)	[net shell]: ping -s 6000 10.0.0.2
+
+
+================================================
+3. test ip(./net_stack -> veth0):
 
 (tom)	tom # ping 10.0.0.1
 
+(bob)	bob # sudo ./net_stack
+(bob)	[net shell]: ping -s 60000 10.0.0.2
+	(see debug information)
+
+
 ================================================
-3. test ip forward:
+4. test ip forward:
 
 (bob)	bob # sudo route add -net 10.0.1.0 netmask 255.255.255.0 gw 10.0.0.1
 	bob # sudo ./net_stack

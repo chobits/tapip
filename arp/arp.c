@@ -41,7 +41,7 @@ void arp_request(struct arpentry *ae)
 }
 
 /*
- * The algorithm is strict based on RFC 826
+ * The algorithm is strict based on RFC 826 ( and referred to linux )
  * ARP Packet Reception
  */
 void arp_in(struct netdev *nd, struct pkbuf *pkb)
@@ -77,21 +77,30 @@ void arp_in(struct netdev *nd, struct pkbuf *pkb)
 
 	/* real arp process */
 	arpdbg(IPFMT " -> " IPFMT, ipfmt(ahdr->arp_sip), ipfmt(ahdr->arp_tip));
+
+	/* drop multi target ip(refer to linux) */
+	if (MULTICAST(ahdr->arp_tip)) {
+		arpdbg("multicast tip");
+		goto err_free_pkb;
+	}
+
+	if (ahdr->arp_tip != nd->_net_ipaddr) {
+		arpdbg("not for us");
+		goto err_free_pkb;
+	}
+
 	if (ae = arp_lookup(ahdr->arp_pro, ahdr->arp_sip)) {
-		/* update old arp entry in cache */
+		/* passive learning(REQUST): update old arp entry in cache */
 		hwacpy(ae->ae_hwaddr, ahdr->arp_sha);
 		/* send waiting packet (maybe we receive arp reply) */
 		if (ae->ae_state = ARP_WAITING)
 			arp_queue_send(ae);
 		ae->ae_state = ARP_RESOLVED;
 		ae->ae_ttl = ARP_TIMEOUT;
-	}
-
-	if (ahdr->arp_tip != nd->_net_ipaddr)
-		goto err_free_pkb;
-
-	if (ae == NULL)
+	} else if (ahdr->arp_op == ARP_OP_REQUEST) {
+		/* Unsolicited ARP reply is not accepted */
 		arp_insert(nd, ahdr->arp_pro, ahdr->arp_sip, ahdr->arp_sha);
+	}
 
 	if (ahdr->arp_op == ARP_OP_REQUEST) {
 		arpdbg("replying arp request");

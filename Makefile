@@ -13,7 +13,8 @@ all:net_stack
 net_stack:$(NET_STACK_OBJS)
 	$(CC) $(CFLAGS) $^ -o $@
 
-test/test_obj.o:test/shell.c test/test.c test/net_command.c
+test/test_obj.o:test/shell.c test/test.c\
+		test/net_command.c test/ping_command.c
 	@(cd test/; make)
 net/net_obj.o:net/net.c net/netdev.c net/tap.c net/pkb.c
 	@(cd net/; make)
@@ -24,14 +25,18 @@ ip/ip_obj.o:ip/ip.c ip/route.c ip/ip_frag.c ip/icmp.c
 lib/lib_obj.o:lib/lib.c
 	@(cd lib/; make)
 
+tags:
+	ctags -R *
+
 clean:
 	@(cd net/; make clean)
 	@(cd test/; make clean)
 	@(cd arp/; make clean)
 	@(cd ip/; make clean)
 	@(cd lib/; make clean)
-	rm -f net_stack
+	rm -f net_stack tags
 
 lines:
 	@echo "code lines:"
 	@wc -l `find |grep "\.[ch]$$"` | sort -n
+

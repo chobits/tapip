@@ -67,8 +67,10 @@ do {\
 #define NET_DEBUG_ICMP	0x00000010
 #define NET_DEBUG_UDP	0x00000020
 #define NET_DEBUG_TCP	0x00000040
+#define NET_DEBUG_ALL	0xffffffff
 
 extern unsigned int net_debug;
 extern void *xmalloc(int);
+extern int str2ip(char *str, unsigned int *ip);
 
 #endif	/* lib.h */

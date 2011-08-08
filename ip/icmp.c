@@ -59,6 +59,13 @@ void icmp_in(struct pkbuf *pkb)
 		ip_hton(iphdr);
 		ip_send(pkb, 0);
 		break;
+	case ICMP_T_ECHORLY:
+		icmpdbg("from "IPFMT" id %d seq %d ttl %d",
+			ipfmt(iphdr->ip_src),
+			ntohs(icmphdr->icmp_data.echo.id),
+			ntohs(icmphdr->icmp_data.echo.seq),
+			iphdr->ip_ttl);
+		break;
 	default:
 		icmpdbg("unknown type");
 		free_pkb(pkb);

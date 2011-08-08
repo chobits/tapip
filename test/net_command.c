@@ -2,6 +2,8 @@
 #include <signal.h>
 
 #include "netif.h"
+#include "ip.h"
+#include "icmp.h"
 #include "arp.h"
 #include "lib.h"
 #include "route.h"
@@ -45,7 +47,7 @@ void netdebug(int argc, char **argv)
 	/* waiting for interrupt signal */
 	signal_wait(SIGQUIT);
 
-	net_debug = 0;	
+	net_debug = 0;
 	ferr("\nexit debug mode\n");
 }
 
@@ -81,3 +83,4 @@ void ifconfig(int argc, char **argv)
 		veth->net_stats.tx_bytes,
 		veth->net_stats.tx_errors);
 }
+

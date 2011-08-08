@@ -1,50 +1,52 @@
 =============================================================================
-TOP1:
+TOP1
 
-+------------------+
-|     internet     |
-+---|---------|----+
-+---|----+----|----+
-| eth0.0 |  eth0.1 |
-+---|----+-|-----|-+
-+---|----+ |  +--|-------+
-| kernel --'  |  bridge  |
-|netstack|    +----|-----+
-+--------+    +----|---------+
-              |   tap0       |
-              |--------------|
-              | /dev/net/tun |
-              +--|----|---|--+
-                poll  |   |
-                 |  read  |
-                 |    |  write
-	      +--|----|---|--+
-              | my netstack  |
-              +--------------+
-
-=============================================================================
-TOP2(my real network):
-
-      gateway
-      (10.20.133.20)
-     /              \
-    /                \
- eth0.0          .---eth0.1
- (10.20.133.24)  |   (0.0.0.0)
-   |             |    |
-  kernel         |   br0
-  network -------'   (10.20.133.25)
-  stack               |
-                     veth0 [tap device]
-                     (0.0.0.0)
-                      |
-                     /dev/net/tun
-                      |
-                     usermode
-                     network
++----------+
+| internet |
++----|-----+
++----|-----+
+|   eth0   |
++----|-----+
++----|-----+
+|  bridge  |
++----|-----+
++----|---------+
+|   tap0       |
+|--------------|
+| /dev/net/tun |
++--|----|---|--+
+  poll  |   |
+   |  read  |
+   |    |  write
++--|----|---|--+
+| my netstack  |
++--------------+
 
 =============================================================================
-TOP3( usermode network stack receiving packet )
+real network of TOP1
+
+      gateway (10.20.133.20)
+        |
+      eth0 (0.0.0.0)
+        |
+       br0 (0.0.0.0)
+        |
+      veth0 [tap device]
+      (0.0.0.0)
+        |
+      /dev/net/tun
+        |
+      usermode (10.20.133.21)
+      network
+
+=============================================================================
+How to build net environment of TOP1
+ # (add "#define CONFIG_TOP1 to ./include/netcfg.h")
+ # ./doc/brctl.sh
+ # ./net_stack
+
+=============================================================================
+kernel-usermode stream of TOP1 ( usermode network stack receiving packet )
 
  network
     |
@@ -75,7 +77,7 @@ dev_queue_xmit(skb) --> tun_net_xmit()
 
 
 =============================================================================
-TOP4 ( usermode network stack sending packet )
+kernel-usermode stream of TOP1 ( usermode network stack sending packet )
 
  usermode
  network
@@ -110,8 +112,23 @@ dev_queue_xmit(skb) --> {eth0 netdevice}_hard_xmit()
                                          \|/
                                        network
 
+
+
 =============================================================================
-TOP5(arping model)
+TOP2
+
+   localhost                   outside network
+   kernel stack                usermode stack [ ./net_stack ]
+       |                         (10.0.0.1)
+       |                 (write) |        . (read)
+       |                        \|/      /|\
+       |                         '        |
+      veth0<--- netif_rx() -----/dev/net/tun
+(10.0.0.2) `-- tun_net_xmit() ------------^
+
+
+=============================================================================
+arping model of TOP2
 
 veth0
 (10.0.0.2)
@@ -143,15 +160,5 @@ arping received <-- socket recv <-- veth0(netif_rx) <----.  |
 NOTE: 10.0.0.2 is veth0 ip address, not our network stack ip address.
 Our network stack is `outside network` in terms of veth0,
 so our program is just an emulator of outside network,
-we must assign a fake ip address for our program!
- see a stack picture:
-
-   localhost                   outside network
-   kernel stack                usermode stack
-       |                         (10.0.0.1)
-       |                 (write) |        . (read)
-       |                        \|/      /|\
-       |                         '        |
-      veth0<--- netif_rx() -----/dev/net/tun
-(10.0.0.2) `-- tun_net_xmit() ------------^
+we must assign a fake ip address(10.0.0.1) for our program ./net_stack !
 
