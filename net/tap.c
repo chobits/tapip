@@ -17,15 +17,12 @@
 
 #define TUNTAPDEV "/dev/net/tun"
 
+static int skfd, skfd6;
+
 void setnetmask_tap(char *name, unsigned int netmask)
 {
 	struct ifreq ifr = {};
 	struct sockaddr_in *saddr;
-	int skfd;
-
-	skfd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
-	if (skfd < 0)
-		perrx("socket PF_INET");
 
 	strcpy(ifr.ifr_name, name);
 	saddr = (struct sockaddr_in *)&ifr.ifr_netmask;
@@ -35,18 +32,12 @@ void setnetmask_tap(char *name, unsigned int netmask)
 		close(skfd);
 		perrx("socket SIOCSIFNETMASK");
 	}
-	close(skfd);
 	dbg("set Netmask: "IPFMT, ipfmt(netmask));
 }
 
 void setflags_tap(char *name, unsigned short flags, int set)
 {
 	struct ifreq ifr = {};
-	int skfd;
-
-	skfd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
-	if (skfd < 0)
-		perrx("socket");
 
 	strcpy(ifr.ifr_name, name);
 	/* get original flags */
@@ -63,7 +54,6 @@ void setflags_tap(char *name, unsigned short flags, int set)
 		close(skfd);
 		perrx("socket SIOCGIFFLAGS");
 	}
-	close(skfd);
 }
 
 void setdown_tap(char *name)
@@ -81,20 +71,14 @@ void setup_tap(char *name)
 void getmtu_tap(char *name, int *mtu)
 {
 	struct ifreq ifr = {};
-	int skfd;
 
-	/* /dev/net/tun cannot support ioctl(SIOCGIFMTU) */
-	skfd = socket(PF_INET6, SOCK_DGRAM, IPPROTO_IP);
-	if (skfd < 0)
-		perrx("socket PF_INET6");
 	strcpy(ifr.ifr_name, name);
 	/* get net order hardware address */
-	if (ioctl(skfd, SIOCGIFMTU, (void *)&ifr) < 0) {
-		close(skfd);
+	if (ioctl(skfd6, SIOCGIFMTU, (void *)&ifr) < 0) {
+		close(skfd6);
 		perrx("ioctl SIOCGIFHWADDR");
 	}
 	*mtu = ifr.ifr_mtu;
-	close(skfd);
 	dbg("mtu: %d", ifr.ifr_mtu);
 }
 
@@ -102,11 +86,6 @@ void setipaddr_tap(char *name, unsigned int ipaddr)
 {
 	struct ifreq ifr = {};
 	struct sockaddr_in *saddr;
-	int skfd;
-
-	skfd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
-	if (skfd < 0)
-		perrx("socket");
 
 	strcpy(ifr.ifr_name, name);
 	saddr = (struct sockaddr_in *)&ifr.ifr_addr;
@@ -116,7 +95,6 @@ void setipaddr_tap(char *name, unsigned int ipaddr)
 		close(skfd);
 		perrx("socket SIOCSIFADDR");
 	}
-	close(skfd);
 	dbg("set IPaddr: "IPFMT, ipfmt(ipaddr));
 }
 
@@ -124,12 +102,7 @@ void getipaddr_tap(char *name, unsigned int *ipaddr)
 {
 	struct ifreq ifr = {};
 	struct sockaddr_in *saddr;
-	int skfd;
 
-	/* /dev/net/tun cannot support ioctl(SIOCGIFADDR) */
-	skfd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
-	if (skfd < 0)
-		perrx("socket");
 	strcpy(ifr.ifr_name, name);
 	if (ioctl(skfd, SIOCGIFADDR, (void *)&ifr) < 0) {
 		close(skfd);
@@ -137,7 +110,6 @@ void getipaddr_tap(char *name, unsigned int *ipaddr)
 	}
 	saddr = (struct sockaddr_in *)&ifr.ifr_addr;
 	*ipaddr = saddr->sin_addr.s_addr;
-	close(skfd);
 	dbg("get IPaddr: "IPFMT, ipfmt(*ipaddr));
 }
 
@@ -195,4 +167,20 @@ void delete_tap(int tapfd)
 	if (ioctl(tapfd, TUNSETPERSIST, 0) < 0)
 		return;
 	close(tapfd);
+}
+
+void set_tap(void)
+{
+	skfd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+	if (skfd < 0)
+		perrx("socket PF_INET");
+	skfd6 = socket(PF_INET6, SOCK_DGRAM, IPPROTO_IP);
+	if (skfd6 < 0)
+		perrx("socket PF_INET6");
+}
+
+void unset_tap(void)
+{
+	close(skfd6);
+	close(skfd);
 }

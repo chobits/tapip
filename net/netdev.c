@@ -54,6 +54,7 @@ void netdev_free(struct netdev *nd)
 
 void netdev_fillinfo(struct netdev *nd)
 {
+	set_tap();
 	getname_tap(nd->net_fd, nd->net_name);
 	gethwaddr_tap(nd->net_fd, nd->net_hwaddr);
 	getmtu_tap(nd->net_name, &nd->net_mtu);
@@ -61,6 +62,7 @@ void netdev_fillinfo(struct netdev *nd)
 	getipaddr_tap(nd->net_name, &nd->net_ipaddr);
 	setnetmask_tap(nd->net_name, FAKE_TAP_NETMASK);
 	setup_tap(nd->net_name);
+	unset_tap();
 }
 
 void netdev_send(struct netdev *nd, struct pkbuf *pkb, int len)
