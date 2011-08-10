@@ -4,14 +4,87 @@
 #include "arp.h"
 #include "lib.h"
 #include "list.h"
+#include "compile.h"
 
+#define arp_cache_head (&arp_cache[0])
+#define arp_cache_end (&arp_cache[ARP_CACHE_SZ])
 static struct arpentry arp_cache[ARP_CACHE_SZ];
+
+#ifdef LOCK_SEM
+
+#include <semaphore.h>
+static sem_t arp_cache_sem;	/* arp cache lock */
+static _inline void arp_cache_lock_init(void)
+{
+	if (sem_init(&arp_cache_sem, 0, 1) == -1)
+		perrx("sem_init");
+}
+
+#ifdef DEBUG_LOCK
+#define arp_cache_lock() do { dbg("lock"); sem_wait(&arp_cache_sem); } while(0)
+#define arp_cache_unlock() do { dbg("unlock"); sem_post(&arp_cache_sem); } while(0)
+#else	/* !DEBUG_LOCK */
+static _inline void arp_cache_lock(void)
+{
+	sem_wait(&arp_cache_sem);
+}
+
+static _inline void arp_cache_unlock(void)
+{
+	sem_post(&arp_cache_sem);
+}
+#endif	/* end DEBUG_LOCK */
+
+#else	/* !DEBUG_SEM */
+
+#include <pthread.h>
+
+/* It is evil to init pthread mutex dynamically X< */
+#ifdef STATIC_MUTEX
+pthread_mutex_t arp_cache_mutex = PTHREAD_MUTEX_INITIALIZER;
+#else
+pthread_mutex_t arp_cache_mutex;
+#ifndef PTHREAD_MUTEX_NORMAL
+#define	PTHREAD_MUTEX_NORMAL PTHREAD_MUTEX_TIMED_NP
+#endif
+
+#endif
+static _inline void arp_cache_lock_init(void)
+{
+#ifndef STATIC_MUTEX
+	pthread_mutexattr_t attr;
+	if (pthread_mutexattr_init(&attr) != 0)
+		perrx("pthread_mutexattr_init");
+	if (pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_NORMAL) != 0)
+		perrx("pthread_mutexattr_settype");
+	if (pthread_mutex_init(&arp_cache_mutex, &attr) != 0)
+		perrx("pthread_mutex_init");
+#endif
+}
+
+#ifdef DEBUG_LOCK
+#define arp_cache_lock() do { dbg("lock"); pthread_mutex_lock(&arp_cache_mutex); } while(0)
+#define arp_cache_unlock() do { dbg("unlock"); pthread_mutex_unlock(&arp_cache_mutex); } while(0)
+#else
+static _inline void arp_cache_lock(void)
+{
+	pthread_mutex_lock(&arp_cache_mutex);
+}
+
+static _inline void arp_cache_unlock(void)
+{
+	pthread_mutex_unlock(&arp_cache_mutex);
+}
+#endif
+#endif	/* end LOCK_SEM */
 
 struct arpentry *arp_alloc(void)
 {
 	static int next = 0;
 	int i;
 	struct arpentry *ae;
+
+	arp_cache_lock();
 	/* round-robin loop algorithm */
 	for (i = 0; i < ARP_CACHE_SZ; i++) {
 		if (arp_cache[next].ae_state == ARP_FREE)
@@ -33,6 +106,8 @@ struct arpentry *arp_alloc(void)
 	list_init(&ae->ae_list);
 	/* for next time allocation */
 	next = (next + 1) % ARP_CACHE_SZ;
+	arp_cache_unlock();
+
 	return ae;
 }
 
@@ -54,16 +129,19 @@ int arp_insert(struct netdev *nd, unsigned short pro,
 
 struct arpentry *arp_lookup(unsigned short pro, unsigned int ipaddr)
 {
-	int i;
+	struct arpentry *ae, *ret = NULL;
+	arp_cache_lock();
 	arpdbg("pro:%d "IPFMT, pro, ipfmt(ipaddr));
-	for (i = 0; i < ARP_CACHE_SZ; i++) {
-		if (arp_cache[i].ae_state == ARP_FREE)
+	for (ae = arp_cache_head; ae < arp_cache_end; ae++) {
+		if (ae->ae_state == ARP_FREE)
 			continue;
-		if (arp_cache[i].ae_pro == pro &&
-			arp_cache[i].ae_ipaddr == ipaddr)
-			return &arp_cache[i];
+		if (ae->ae_pro == pro && ae->ae_ipaddr == ipaddr) {
+			ret = ae;
+			break;
+		}
 	}
-	return NULL;
+	arp_cache_unlock();
+	return ret;
 }
 
 struct arpentry *arp_lookup_resolv(unsigned short pro, unsigned int ipaddr)
@@ -78,9 +156,9 @@ struct arpentry *arp_lookup_resolv(unsigned short pro, unsigned int ipaddr)
 void arp_timer(int delta)
 {
 	struct arpentry *ae;
-	int i;
 
-	for (ae = &arp_cache[0], i = 0; i < ARP_CACHE_SZ; i++, ae++) {
+	arp_cache_lock();
+	for (ae = arp_cache_head; ae < arp_cache_end; ae++) {
 		if (ae->ae_state == ARP_FREE)
 			continue;
 		ae->ae_ttl -= delta;
@@ -91,10 +169,13 @@ void arp_timer(int delta)
 			} else {
 				/* retry arp request */
 				ae->ae_ttl = ARP_WAITTIME;
+				arp_cache_unlock();
 				arp_request(ae);
+				arp_cache_lock();
 			}
 		}
 	}
+	arp_cache_unlock();
 }
 
 void arp_cache_init(void)
@@ -102,7 +183,9 @@ void arp_cache_init(void)
 	int i;
 	for (i = 0; i < ARP_CACHE_SZ; i++)
 		arp_cache[i].ae_state = ARP_FREE;
-	dbg("ARP INIT");
+	dbg("ARP CACHE INIT");
+	arp_cache_lock_init();
+	dbg("ARP CACHE SEMAPHORE INIT");
 }
 
 static char *__arpstate[] = {
@@ -127,9 +210,11 @@ char *ipnfmt(unsigned int ipaddr)
 void arp_cache_traverse(void)
 {
 	struct arpentry *ae;
-	int i, first;
+	int first;
+
+	arp_cache_lock();
 	first = 1;
-	for (ae = &arp_cache[0], i = 0; i < ARP_CACHE_SZ; i++, ae++) {
+	for (ae = arp_cache_head; ae < arp_cache_end; ae++) {
 		if (ae->ae_state == ARP_FREE)
 			continue;
 		if (first) {
@@ -140,4 +225,5 @@ void arp_cache_traverse(void)
 			arpstate(ae), ((ae->ae_ttl < 0) ? 0 : ae->ae_ttl),
 			macfmt(ae->ae_hwaddr), ipnfmt(ae->ae_ipaddr));
 	}
+	arp_cache_unlock();
 }

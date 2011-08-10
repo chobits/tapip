@@ -4,6 +4,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/syscall.h>
+
+#define gettid() syscall(SYS_gettid)
+
 
 /* colour macro */
 #define red(str) "\e[01;31m"#str"\e\[0m"
@@ -16,7 +21,7 @@
 #define blue(str) navyblue(str)
 
 #define ferr(fmt, args...) fprintf(stderr, fmt, ##args)
-#define dbg(fmt, args...) ferr("%s " fmt "\n", __FUNCTION__, ##args)
+#define dbg(fmt, args...) ferr("[%d]%s " fmt "\n", gettid(), __FUNCTION__, ##args)
 
 #define devdbg(fmt, args...)\
 do {\

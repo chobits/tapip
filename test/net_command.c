@@ -22,7 +22,6 @@ void netdebug(int argc, char **argv)
 {
 	do {
 		argc--;
-		dbg("%s", argv[argc]);
 		if (strcmp(argv[argc], "dev") == 0) {
 			net_debug |= NET_DEBUG_DEV;
 		} else if (strcmp(argv[argc], "l2") == 0) {
@@ -37,6 +36,8 @@ void netdebug(int argc, char **argv)
 			net_debug |= NET_DEBUG_UDP;
 		} else if (strcmp(argv[argc], "tcp") == 0) {
 			net_debug |= NET_DEBUG_TCP;
+		} else if (strcmp(argv[argc], "all") == 0) {
+			net_debug |= NET_DEBUG_ALL;
 		} else {
 			ferr("Usage: debug (dev|l2|arp|ip|icmp|udp|tcp)+\n");
 			return;

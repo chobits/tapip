@@ -34,7 +34,7 @@ clean:
 	@(cd arp/; make clean)
 	@(cd ip/; make clean)
 	@(cd lib/; make clean)
-	rm -f net_stack tags
+	rm -f net_stack
 
 lines:
 	@echo "code lines:"

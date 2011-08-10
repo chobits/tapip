@@ -37,8 +37,10 @@ void net_stack_run(void)
 {
 	/* create timer thread */
 	threads[0] = newthread((pfunc_t)net_timer);
+	dbg("net_timer thread %x init", threads[0]);
 	/* create netdev thread */
 	threads[1] = newthread((pfunc_t)netdev_interrupt);
+	dbg("netdev_interrupt thread %x init", threads[1]);
 	/* net shell runs! */
 	test_shell(NULL);
 }
