@@ -10,9 +10,12 @@ struct icmp {
 			unsigned short id;	/* identifier */
 			unsigned short seq;	/* sequence number */
 		} echo;
-	} icmp_data;
-	unsigned char icmp_d[0];
+	} icmp_un;
+	unsigned char icmp_data[0];
 } __attribute__((packed));
+
+#define icmp_id icmp_un.echo.id
+#define icmp_seq icmp_un.echo.id
 
 #define ICMP_HRD_SZ 4
 #define ICMP_ECHO_HRD_SZ 8

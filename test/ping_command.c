@@ -104,18 +104,18 @@ void ping(int argc, char **argv)
 	iphdr = pkb2ip(pkb);
 	icmphdr = (struct icmp *)iphdr->ip_data;
 	/* fill icmp data */
-	memset(icmphdr->icmp_d, 'x', size);
+	memset(icmphdr->icmp_data, 'x', size);
 	icmphdr->icmp_type = ICMP_T_ECHOREQ;
 	icmphdr->icmp_code = 0;
-	icmphdr->icmp_data.echo.id = htons(++id);
-	icmphdr->icmp_data.echo.seq = htons(0);
+	icmphdr->icmp_id = htons(++id);
+	icmphdr->icmp_seq = htons(0);
 	icmphdr->icmp_cksum = 0;
 	icmphdr->icmp_cksum = icmp_chksum((unsigned char *)icmphdr,
 				ICMP_ECHO_HRD_SZ + size);
 	printf("send to "IPFMT" id %d seq %d ttl %d\n",
 			ipfmt(ipaddr),
 			id,
-			ntohs(icmphdr->icmp_data.echo.seq),
+			ntohs(icmphdr->icmp_seq),
 			ttl);
 	net_debug |= NET_DEBUG_ICMP;
 	ip_send_info(pkb, 0, IP_HRD_SZ + ICMP_ECHO_HRD_SZ + size,

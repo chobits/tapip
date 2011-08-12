@@ -62,8 +62,8 @@ void icmp_in(struct pkbuf *pkb)
 	case ICMP_T_ECHORLY:
 		icmpdbg("from "IPFMT" id %d seq %d ttl %d",
 			ipfmt(iphdr->ip_src),
-			ntohs(icmphdr->icmp_data.echo.id),
-			ntohs(icmphdr->icmp_data.echo.seq),
+			ntohs(icmphdr->icmp_id),
+			ntohs(icmphdr->icmp_seq),
 			iphdr->ip_ttl);
 		break;
 	default:
