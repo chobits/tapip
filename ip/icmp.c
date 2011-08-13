@@ -31,13 +31,13 @@ void icmp_in(struct pkbuf *pkb)
 	}
 	switch (icmphdr->icmp_type) {
 	case ICMP_T_ECHOREQ:
-		icmpdbg("echo request data %d bytes", icmplen - ICMP_HRD_SZ - 4);
+		icmpdbg("echo request data %d bytes", icmplen - ICMP_HRD_SZ);
 		if (icmphdr->icmp_code) {
 			icmpdbg("echo request packet corrupted");
 			free_pkb(pkb);
 			return;
 		}
-		if (icmplen < 4 + ICMP_HRD_SZ) {
+		if (icmplen < ICMP_HRD_SZ) {
 			icmpdbg("echo request packet is too small");
 			free_pkb(pkb);
 			return;
@@ -58,6 +58,12 @@ void icmp_in(struct pkbuf *pkb)
 		iphdr->ip_dst = tmp;
 		ip_hton(iphdr);
 		ip_send(pkb, 0);
+		break;
+	case ICMP_T_DESTUNREACH:
+		icmpdbg("destination unreachable");
+		break;
+	case ICMP_T_REDIRECT:
+		icmpdbg("redirect");
 		break;
 	case ICMP_T_ECHORLY:
 		icmpdbg("from "IPFMT" id %d seq %d ttl %d",

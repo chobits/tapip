@@ -15,7 +15,7 @@
 #ifdef CONFIG_TOP2
 #define FAKE_TAP_ADDR 0x0200000a	/* 10.0.0.2 */
 #define FAKE_TAP_NETMASK 0x00ffffff	/* 255.255.255.0 */
-#define FAKE_IPADDR 0x0100000a	/* 10.0.0.1 */
+#define FAKE_IPADDR 0x0100000a		/* 10.0.0.1 */
 #define FAKE_HWADDR "\x12\x34\x45\x67\x89\xab"
 #endif
 

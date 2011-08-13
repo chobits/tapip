@@ -40,8 +40,8 @@ void netdev_init(void)
 	/* fake information for our netstack */
 	veth->_net_ipaddr = FAKE_IPADDR;
 	hwacpy(veth->_net_hwaddr, FAKE_HWADDR);
-	printf("network ip address: "IPFMT"\n", ipfmt(veth->_net_ipaddr));
-	printf("network hw address: "MACFMT"\n", macfmt(veth->_net_hwaddr));
+	dbg("network ip address: " IPFMT, ipfmt(veth->_net_ipaddr));
+	dbg("network hw address: " MACFMT, macfmt(veth->_net_hwaddr));
 	/* init stats */
 	veth->net_stats.rx_packets = 0;
 	veth->net_stats.tx_bytes = 0;

@@ -17,10 +17,12 @@ struct icmp {
 #define icmp_id icmp_un.echo.id
 #define icmp_seq icmp_un.echo.id
 
-#define ICMP_HRD_SZ 4
-#define ICMP_ECHO_HRD_SZ 8
+#define ICMP_HRD_SZ sizeof(struct icmp)
 
-#define ICMP_T_ECHORLY 0
-#define ICMP_T_ECHOREQ 8
+#define ICMP_T_ECHORLY		0
+#define ICMP_T_DESTUNREACH	3
+#define ICMP_T_REDIRECT		5
+#define ICMP_T_ECHOREQ		8
+#define ICMP_T_TIMEEXCEED	11
 
 #endif	/* icmp.h */

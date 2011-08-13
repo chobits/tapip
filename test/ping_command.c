@@ -100,7 +100,7 @@ void ping(int argc, char **argv)
 		return;
 	}
 	/* alloc packet */
-	pkb = alloc_pkb(ETH_HRD_SZ + IP_HRD_SZ + ICMP_ECHO_HRD_SZ + size);
+	pkb = alloc_pkb(ETH_HRD_SZ + IP_HRD_SZ + ICMP_HRD_SZ + size);
 	iphdr = pkb2ip(pkb);
 	icmphdr = (struct icmp *)iphdr->ip_data;
 	/* fill icmp data */
@@ -111,14 +111,14 @@ void ping(int argc, char **argv)
 	icmphdr->icmp_seq = htons(0);
 	icmphdr->icmp_cksum = 0;
 	icmphdr->icmp_cksum = icmp_chksum((unsigned char *)icmphdr,
-				ICMP_ECHO_HRD_SZ + size);
+				ICMP_HRD_SZ + size);
 	printf("send to "IPFMT" id %d seq %d ttl %d\n",
 			ipfmt(ipaddr),
 			id,
 			ntohs(icmphdr->icmp_seq),
 			ttl);
 	net_debug |= NET_DEBUG_ICMP;
-	ip_send_info(pkb, 0, IP_HRD_SZ + ICMP_ECHO_HRD_SZ + size,
+	ip_send_info(pkb, 0, IP_HRD_SZ + ICMP_HRD_SZ + size,
 				ttl, IP_P_ICMP, ipaddr);
 	sleep(1);
 	net_debug &= ~NET_DEBUG_ICMP;
