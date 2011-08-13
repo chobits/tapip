@@ -10,7 +10,12 @@
 #include "lib.h"
 #include "arp.h"
 
-/* extern net stack command handler */
+/* extern builtin command handlers */
+static void builtin_help(int argc, char **argv);
+static void builtin_exit(int argc, char **argv);
+static void builtin_clear(int argc, char **argv);
+
+/* extern net stack command handlers */
 extern void arpcache(int, char **);
 extern void netdebug(int, char **);
 extern void ifconfig(int, char **);
@@ -29,15 +34,10 @@ struct command {
 
 #define CMD_NONUM -1	/* Arguments is parsed in command function. */
 
-static void builtin_exit(int argc, char **argv)
-{
-	quit = 1;
-}
-
-extern void builtin_help(int argc, char **argv);
 static struct command cmds[] = {
 	/* built-in command */
 	{ CMD_NONUM, builtin_help, "help", "display shell command information" },
+	{ CMD_NONUM, builtin_clear, "clear", "clear the terminal screen" },
 	{ CMD_NONUM, builtin_exit, "exit", "exit shell" },
 	/* net stack command */
 	{ CMD_NONUM, netdebug, "debug", "debug dev|l2|arp|ip|icmp|udp|tcp|all" },
@@ -48,13 +48,23 @@ static struct command cmds[] = {
 	{ 0, NULL, NULL, NULL }	/* last one flag */
 };
 
-void builtin_help(int argc, char **argv)
+static void builtin_clear(int argc, char **argv)
+{
+	printf("\033[1H\033[2J");
+}
+
+static void builtin_help(int argc, char **argv)
 {
 	struct command *cmd;
 	int i;
 	for (i = 1, cmd = &cmds[0]; cmd->cmd_num; i++, cmd++)
 		printf(" %d  %s: %s\n", i, cmd->cmd_str, cmd->cmd_help);
 
+}
+
+static void builtin_exit(int argc, char **argv)
+{
+	quit = 1;
 }
 
 static int get_line(char *buf, int bufsz)
