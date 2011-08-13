@@ -11,8 +11,10 @@
 extern unsigned int net_debug;
 
 static unsigned short id = 0;
+static unsigned short seq;
 static int size;
 static int count;
+static int finite;
 static int ttl;
 static unsigned ipaddr;
 
@@ -39,11 +41,15 @@ static int parse_args(int argc, char **argv)
 
 	/* init options */
 	size = 56;
-	count = 1;
+	finite = 0;
+	count = 0;
 	ttl = 64;
 	ipaddr = 0;
+	id++;
+	seq = 0;
 
-	optind = 0;	/* reinitialize getopt() */
+	/* reinitialize getopt() */
+	optind = 0;
 	opterr = 0;
 	while ((c = getopt(argc, argv, "s:t:c:?h")) != -1) {
 		switch (c) {
@@ -52,6 +58,7 @@ static int parse_args(int argc, char **argv)
 			break;
 		case 'c':
 			count = atoi(optarg);
+			finite = 1;
 			break;
 		case 't':
 			ttl = atoi(optarg);
@@ -70,7 +77,7 @@ static int parse_args(int argc, char **argv)
 		printf("ttl %d out of range\n", ttl);
 		return -2;
 	}
-	if (count <= 0)
+	if (finite && count <= 0)
 		printf("bad number of packets to transmit\n");
 
 	argc -= optind;
@@ -85,20 +92,12 @@ static int parse_args(int argc, char **argv)
 	return 0;
 }
 
-/* raw ping: we should use raw ip instead of it sometime */
-void ping(int argc, char **argv)
+void send_packet(void)
 {
 	struct pkbuf *pkb;
 	struct icmp *icmphdr;
 	struct ip *iphdr;
-	int err;
 
-	/* parse args */
-	if ((err = parse_args(argc, argv)) < 0) {
-		if (err == -1)
-			usage();
-		return;
-	}
 	/* alloc packet */
 	pkb = alloc_pkb(ETH_HRD_SZ + IP_HRD_SZ + ICMP_HRD_SZ + size);
 	iphdr = pkb2ip(pkb);
@@ -107,19 +106,47 @@ void ping(int argc, char **argv)
 	memset(icmphdr->icmp_data, 'x', size);
 	icmphdr->icmp_type = ICMP_T_ECHOREQ;
 	icmphdr->icmp_code = 0;
-	icmphdr->icmp_id = htons(++id);
-	icmphdr->icmp_seq = htons(0);
+	icmphdr->icmp_id = htons(id);
+	icmphdr->icmp_seq = htons(++seq);
 	icmphdr->icmp_cksum = 0;
 	icmphdr->icmp_cksum = icmp_chksum((unsigned char *)icmphdr,
-				ICMP_HRD_SZ + size);
+			ICMP_HRD_SZ + size);
 	printf("send to "IPFMT" id %d seq %d ttl %d\n",
 			ipfmt(ipaddr),
 			id,
 			ntohs(icmphdr->icmp_seq),
 			ttl);
-	net_debug |= NET_DEBUG_ICMP;
 	ip_send_info(pkb, 0, IP_HRD_SZ + ICMP_HRD_SZ + size,
-				ttl, IP_P_ICMP, ipaddr);
-	sleep(1);
+			ttl, IP_P_ICMP, ipaddr);
+}
+
+void sigalrm(int num)
+{
+	if (!finite || count > 0) {
+		count--;
+		alarm(1);
+		send_packet();
+	}
+	signal_wait(SIGQUIT);
+}
+
+/* raw ping: we should use raw ip instead of it sometime */
+void ping(int argc, char **argv)
+{
+	int err;
+
+	/* parse args */
+	if ((err = parse_args(argc, argv)) < 0) {
+		if (err == -1)
+			usage();
+		return;
+	}
+	/* signal install */
+	signal(SIGALRM, sigalrm);
+	/* send packet and debug */
+	net_debug |= NET_DEBUG_ICMP;
+	sigalrm(SIGALRM);
+	alarm(0);
 	net_debug &= ~NET_DEBUG_ICMP;
+	printf("\n");
 }
