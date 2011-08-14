@@ -47,4 +47,18 @@ static inline char *ethpro(unsigned short proto)
 		return "unknown";
 }
 
+static inline int is_eth_multicast(unsigned char *hwa)
+{
+	return (hwa[0] & 0x01);
+}
+
+static inline int is_eth_broadcast(unsigned char *hwa)
+{
+	/*
+	 * fast compare method
+	 * ethernet mac broadcast is FF:FF:FF:FF:FF:FF
+	 */
+	return (hwa[0] & hwa[1] & hwa[2] & hwa[3] & hwa[4] & hwa[5]) == 0xff;
+}
+
 #endif	/* ether.h */

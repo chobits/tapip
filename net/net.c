@@ -55,12 +55,12 @@ void netdev_exit(void)
 		netdev_free(veth);
 }
 
-void netdev_rx(struct netdev *nd)
+void netdev_rx(struct netdev *dev)
 {
 	struct pkbuf *pkb;
-	pkb = alloc_netdev_pkb(nd);
-	if (netdev_recv(nd, pkb) > 0)
-		net_in(nd, pkb);
+	pkb = alloc_netdev_pkb(dev);
+	if (netdev_recv(dev, pkb) > 0)
+		net_in(dev, pkb);
 	else
 		free_pkb(pkb);
 	/*
@@ -70,10 +70,10 @@ void netdev_rx(struct netdev *nd)
 }
 
 #ifdef DEBUG_PKB
-void _netdev_tx(struct netdev *nd, struct pkbuf *pkb, int len,
+void _netdev_tx(struct netdev *dev, struct pkbuf *pkb, int len,
 		unsigned short proto, unsigned char *dst)
 #else
-void netdev_tx(struct netdev *nd, struct pkbuf *pkb, int len,
+void netdev_tx(struct netdev *dev, struct pkbuf *pkb, int len,
 		unsigned short proto, unsigned char *dst)
 #endif
 {
@@ -81,7 +81,7 @@ void netdev_tx(struct netdev *nd, struct pkbuf *pkb, int len,
 
 	/* first copy to eth_dst, maybe eth_src will be copied to eth_dst */
 	hwacpy(ehdr->eth_dst, dst);
-	hwacpy(ehdr->eth_src, nd->_net_hwaddr);
+	hwacpy(ehdr->eth_src, dev->_net_hwaddr);
 	ehdr->eth_pro = htons(proto);
 
 	l2dbg(MACFMT " -> " MACFMT "(%s)",
@@ -89,41 +89,58 @@ void netdev_tx(struct netdev *nd, struct pkbuf *pkb, int len,
 				macfmt(ehdr->eth_dst),
 				ethpro(proto));
 
-	netdev_send(nd, pkb, len + sizeof(struct ether));
+	netdev_send(dev, pkb, len + sizeof(struct ether));
 	free_pkb(pkb);
 }
 
-/* L2 protocol parsing */
-void net_in(struct netdev *nd, struct pkbuf *pkb)
+/* referred to eth_trans_type() in linux */
+static struct ether *eth_init(struct netdev *dev, struct pkbuf *pkb)
 {
 	struct ether *ehdr = (struct ether *)pkb->pk_data;
-	int proto, len;
-
-	len = pkb->pk_len;
 	if (pkb->pk_len < ETH_HRD_SZ) {
 		free_pkb(pkb);
 		dbg("received packet is too small:%d bytes", pkb->pk_len);
-		return;
+		return NULL;
 	}
-	proto = ntohs(ehdr->eth_pro);
+	/* hardware address type */
+	if (is_eth_multicast(ehdr->eth_dst)) {
+		if (is_eth_broadcast(ehdr->eth_dst))
+			pkb->pk_type = PKT_BROADCAST;
+		else
+			pkb->pk_type = PKT_MULTICAST;
+	} else if (!hwacmp(ehdr->eth_dst, dev->_net_hwaddr)) {
+			pkb->pk_type = PKT_LOCALHOST;
+	} else {
+			pkb->pk_type = PKT_OTHERHOST;
+	}
+	/* packet protocol */
+	pkb->pk_pro = ntohs(ehdr->eth_pro);
+	return ehdr;
+}
 
+/* L2 protocol parsing */
+void net_in(struct netdev *dev, struct pkbuf *pkb)
+{
+	struct ether *ehdr = eth_init(dev, pkb);
+	if (!ehdr)
+		return;
 	l2dbg(MACFMT " -> " MACFMT "(%s)",
 				macfmt(ehdr->eth_src),
 				macfmt(ehdr->eth_dst),
-				ethpro(proto));
-	pkb->pk_pro = proto;
-	switch (proto) {
+				ethpro(pkb->pk_pro));
+	switch (pkb->pk_pro) {
 	case ETH_P_RARP:
-//		rarp_in(nd, pkb);
+//		rarp_in(dev, pkb);
 		break;
 	case ETH_P_ARP:
-		arp_in(nd, pkb);
+		arp_in(dev, pkb);
 		break;
 	case ETH_P_IP:
-		ip_in(nd, pkb);
+		ip_in(dev, pkb);
 		break;
 	default:
-//		dbg("unkown ether packet type");
+		l2dbg("drop unkown-type packet");
+		free_pkb(pkb);
 		break;
 	}
 }

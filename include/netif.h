@@ -32,9 +32,16 @@ struct netdev {
 struct pkbuf {
 	struct list_head pk_list;	/* for ip fragment or arp waiting list */
 	unsigned short pk_pro;		/* ethernet packet type ID */
+	unsigned short pk_type;		/* packet hardware address type */
 	int pk_len;
 	unsigned char pk_data[0];
-};
+} __attribute__((packed));
+
+/* packet hardware address type */
+#define PKT_LOCALHOST	1
+#define PKT_OTHERHOST	2
+#define PKT_MULTICAST	3
+#define PKT_BROADCAST	4
 
 #define HOST_LITTLE_ENDIAN	/* default: little endian machine */
 #ifdef HOST_LITTLE_ENDIAN

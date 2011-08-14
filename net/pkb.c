@@ -19,6 +19,7 @@ struct pkbuf *alloc_pkb(int size)
 	pkb = xmalloc(sizeof(*pkb) + size);
 	pkb->pk_len = size;
 	pkb->pk_pro = 0xffff;
+	pkb->pk_type = 0;
 	list_init(&pkb->pk_list);
 	return pkb;
 }
@@ -68,6 +69,5 @@ void pkbdbg(struct pkbuf *pkb)
 	}
 	if ((i % 16) != 0)
 		ferr("\n");
-
 }
 

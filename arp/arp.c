@@ -44,11 +44,16 @@ void arp_request(struct arpentry *ae)
  * The algorithm is strict based on RFC 826 ( and referred to linux )
  * ARP Packet Reception
  */
-void arp_in(struct netdev *nd, struct pkbuf *pkb)
+void arp_in(struct netdev *dev, struct pkbuf *pkb)
 {
 	struct ether *ehdr = (struct ether *)pkb->pk_data;
 	struct arp *ahdr = (struct arp *)ehdr->eth_data;
 	struct arpentry *ae;
+
+	if (pkb->pk_type == PKT_OTHERHOST) {
+		arpdbg("arp(l2) packet is not for us");
+		goto err_free_pkb;
+	}
 
 	if (pkb->pk_len < ETH_HRD_SZ + ARP_HRD_SZ) {
 		arpdbg("arp packet is too small");
@@ -84,7 +89,7 @@ void arp_in(struct netdev *nd, struct pkbuf *pkb)
 		goto err_free_pkb;
 	}
 
-	if (ahdr->arp_tip != nd->_net_ipaddr) {
+	if (ahdr->arp_tip != dev->_net_ipaddr) {
 		arpdbg("not for us");
 		goto err_free_pkb;
 	}
@@ -99,7 +104,7 @@ void arp_in(struct netdev *nd, struct pkbuf *pkb)
 		ae->ae_ttl = ARP_TIMEOUT;
 	} else if (ahdr->arp_op == ARP_OP_REQUEST) {
 		/* Unsolicited ARP reply is not accepted */
-		arp_insert(nd, ahdr->arp_pro, ahdr->arp_sip, ahdr->arp_sha);
+		arp_insert(dev, ahdr->arp_pro, ahdr->arp_sip, ahdr->arp_sha);
 	}
 
 	if (ahdr->arp_op == ARP_OP_REQUEST) {
@@ -108,11 +113,11 @@ void arp_in(struct netdev *nd, struct pkbuf *pkb)
 		ahdr->arp_op = ARP_OP_REPLY;
 		hwacpy(ahdr->arp_tha, ahdr->arp_sha);
 		ahdr->arp_tip = ahdr->arp_sip;
-		hwacpy(ahdr->arp_sha, nd->_net_hwaddr);
-		ahdr->arp_sip = nd->_net_ipaddr;
+		hwacpy(ahdr->arp_sha, dev->_net_hwaddr);
+		ahdr->arp_sip = dev->_net_ipaddr;
 		arp_ntoh(ahdr);
 		/* ether field */
-		netdev_tx(nd, pkb, ARP_HRD_SZ, ETH_P_ARP, ehdr->eth_src);
+		netdev_tx(dev, pkb, ARP_HRD_SZ, ETH_P_ARP, ehdr->eth_src);
 	}
 
 	/* arp reply has been handled! */
