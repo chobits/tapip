@@ -43,6 +43,7 @@ struct ip {
 
 #define ipver(ip) ((ip)->ip_ver)
 #define iphlen(ip) ((ip)->ip_hlen << 2)
+#define ipdata(ip) ((unsigned char *)(ip) + iphlen(ip))
 #define ipoff(ip) ((((ip)->ip_fragoff) & IP_FRAG_OFF) * 8)
 #define pkb2ip(pkb) ((struct ip *)((pkb)->pk_data + ETH_HRD_SZ))
 
@@ -63,14 +64,28 @@ struct fragment {
 	unsigned short frag_id;
 	unsigned int frag_src;
 	unsigned int frag_dst;
-	int frag_ttl;		/* reassembly timer */
+	unsigned short frag_pro;
+	unsigned int frag_hlen;
 	unsigned int frag_rsize;/* size of received fragments */
-	unsigned int frag_size;	/* total fragments size(original packet) */
+	unsigned int frag_size;	/* total fragments payload size(not contain ip header) */
+	int frag_ttl;		/* reassembly timer */
+	unsigned int frag_flags;/* fragment flags */
 	struct list_head frag_list;
 	struct list_head frag_pkb;
 };
 
-extern struct pkbuf *ip_reass(struct pkbuf *);
-#define MULTICAST(netip) ((0x000000f0 & (netip)) == 0x000000e0)
+#define FRAG_COMPLETE	0x00000001
+#define FRAG_FIRST_IN	0x00000002
+#define FRAG_LAST_IN	0x00000004
+#define FRAG_FL_IN	0x00000006	/* first and last in*/
 
+#define MULTICAST(netip) ((0x000000f0 & (netip)) == 0x000000e0)
+#define BROADCAST(netip) (((0xff000000 & (netip)) == 0xff000000) ||\
+				(0xff000000 & (netip) == 0x00000000))
+static inline int equsubnet(unsigned int mask, unsigned int ip1, unsigned int ip2)
+{
+	return ((mask & ip1) == (mask & ip2));
+}
+
+extern struct pkbuf *ip_reass(struct pkbuf *);
 #endif	/* ip */
