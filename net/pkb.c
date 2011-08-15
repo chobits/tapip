@@ -20,6 +20,8 @@ struct pkbuf *alloc_pkb(int size)
 	pkb->pk_len = size;
 	pkb->pk_pro = 0xffff;
 	pkb->pk_type = 0;
+	pkb->pk_indev = NULL;
+	pkb->pk_rtdst = NULL;
 	list_init(&pkb->pk_list);
 	return pkb;
 }

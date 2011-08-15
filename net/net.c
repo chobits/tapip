@@ -38,6 +38,7 @@ void netdev_init(void)
 	}
 	netdev_fillinfo(veth);
 	/* fake information for our netstack */
+	veth->_net_mask = FAKE_NETMASK;
 	veth->_net_ipaddr = FAKE_IPADDR;
 	hwacpy(veth->_net_hwaddr, FAKE_HWADDR);
 	dbg("network ip address: " IPFMT, ipfmt(veth->_net_ipaddr));
@@ -128,6 +129,7 @@ void net_in(struct netdev *dev, struct pkbuf *pkb)
 				macfmt(ehdr->eth_src),
 				macfmt(ehdr->eth_dst),
 				ethpro(pkb->pk_pro));
+	pkb->pk_indev = dev;
 	switch (pkb->pk_pro) {
 	case ETH_P_RARP:
 //		rarp_in(dev, pkb);

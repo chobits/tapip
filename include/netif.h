@@ -24,16 +24,20 @@ struct netdev {
 	unsigned char net_hwaddr[NETDEV_ALEN];	/* hardware address */
 	unsigned char net_name[NETDEV_NLEN];	/* device name */
 	/* our netstack information */
-	unsigned int _net_ipaddr;		/* fake ip address */
-	unsigned char _net_hwaddr[NETDEV_ALEN];	/* fake hardware address */
+	unsigned int _net_mask;			/* local(fake) netmask */
+	unsigned int _net_ipaddr;		/* local(fake) ip address */
+	unsigned char _net_hwaddr[NETDEV_ALEN];	/* local(fake) hardware address */
 	struct netstats net_stats;		/* protocol independent statistic */
 };
+#define LOCALNET(dev) ((dev)->_net_ipaddr & (dev)->_net_mask)
 
 struct pkbuf {
 	struct list_head pk_list;	/* for ip fragment or arp waiting list */
 	unsigned short pk_pro;		/* ethernet packet type ID */
 	unsigned short pk_type;		/* packet hardware address type */
 	int pk_len;
+	struct netdev *pk_indev;
+	struct rtentry *pk_rtdst;
 	unsigned char pk_data[0];
 } __attribute__((packed));
 
