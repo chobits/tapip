@@ -25,7 +25,7 @@ ip/ip_obj.o:ip/ip.c ip/route.c ip/ip_frag.c ip/icmp.c
 lib/lib_obj.o:lib/lib.c
 	@(cd lib/; make)
 
-tags:
+tag:
 	ctags -R *
 
 clean:
@@ -38,5 +38,5 @@ clean:
 
 lines:
 	@echo "code lines:"
-	@wc -l `find |grep "\.[ch]$$"` | sort -n
+	@wc -l `find . -name \*.[ch]` | sort -n
 
