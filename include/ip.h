@@ -79,6 +79,11 @@ struct fragment {
 #define FRAG_LAST_IN	0x00000004
 #define FRAG_FL_IN	0x00000006	/* first and last in*/
 
+#define FRAG_TIME	30	/* exceed defragment time: 30 sec */
+
+#define frag_head_pkb(frag)\
+	list_first_entry(&(frag)->frag_pkb, struct pkbuf, pk_list)
+
 #define MULTICAST(netip) ((0x000000f0 & (netip)) == 0x000000e0)
 #define BROADCAST(netip) (((0xff000000 & (netip)) == 0xff000000) ||\
 				(0xff000000 & (netip) == 0x00000000))

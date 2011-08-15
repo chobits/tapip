@@ -1,9 +1,11 @@
 #include "netif.h"
 #include "ether.h"
 #include "ip.h"
+#include "icmp.h"
 
 #include "lib.h"
 #include "list.h"
+#include "netcfg.h"
 
 static LIST_HEAD(frag_head);	/* head of datagrams */
 
@@ -22,7 +24,11 @@ struct fragment *new_frag(struct ip *iphdr)
 {
 	struct fragment *frag;
 	frag = xmalloc(sizeof(*frag));
-	frag->frag_ttl = 600;
+#ifdef ICMP_EXC_FRAGTIME_TEST
+	frag->frag_ttl = 3;
+#else
+	frag->frag_ttl = FRAG_TIME;
+#endif
 	frag->frag_id = iphdr->ip_id;
 	frag->frag_src = iphdr->ip_src;
 	frag->frag_dst = iphdr->ip_dst;
@@ -39,9 +45,11 @@ struct fragment *new_frag(struct ip *iphdr)
 void delete_frag(struct fragment *frag)
 {
 	struct pkbuf *pkb;
+	struct fragment *frag1;
+
 	list_del(&frag->frag_list);
 	while (!list_empty(&frag->frag_pkb)) {
-		pkb = list_first_entry(&frag->frag_pkb, struct pkbuf, pk_list);
+		pkb = frag_head_pkb(frag);
 		list_del(&pkb->pk_list);
 		free_pkb(pkb);
 	}
@@ -196,6 +204,9 @@ struct pkbuf *ip_reass(struct pkbuf *pkb)
 		frag = new_frag(iphdr);
 	if (insert_frag(pkb, frag) < 0)
 		return NULL;
+#ifdef ICMP_EXC_FRAGTIME_TEST
+	return NULL;
+#endif
 	if (complete_frag(frag))
 		pkb = reass_frag(frag);
 	else
@@ -257,15 +268,32 @@ void ip_send_frag(struct netdev *dev, struct pkbuf *pkb, unsigned int dst)
 /* FIXME: ip_timer test */
 void ip_timer(int delta)
 {
-	struct fragment *frag;
+	struct fragment *frag, *__safe;
 	/* FIXME: mutex-- for frag_head */
-	list_for_each_entry(frag, &frag_head, frag_list) {
+	/*
+	 * delete_frag() will remove list from frag_head,
+	 * so we use safe list traverse macro to avoid corruption.
+	 */
+	list_for_each_entry_safe(frag, __safe, &frag_head, frag_list) {
+#ifndef ICMP_EXC_FRAGTIME_TEST
 		/* condition race */
 		if (full_frag(frag))
 			continue;
+#endif
 		frag->frag_ttl -= delta;
-		if (frag->frag_ttl <= 0)
+		if (frag->frag_ttl <= 0) {
+			struct pkbuf *pkb = frag_head_pkb(frag);
+			ip_hton(pkb2ip(pkb));
+			/*
+			 * RFC 792:
+			 * If fragment zero is not available then
+			 * no time exceeded need be sent at all.
+			 *
+			 * And icmp_send() will check the fragment zero.
+			 */
+			icmp_send(ICMP_T_TIMEEXCEED, ICMP_EXC_FRAGTIME, 0, pkb);
 			delete_frag(frag);
+		}
 	}
 	/* mutex++ for frag_head */
 }
