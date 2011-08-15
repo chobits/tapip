@@ -2,6 +2,7 @@
 #include "ether.h"
 #include "arp.h"
 #include "ip.h"
+#include "icmp.h"
 #include "route.h"
 
 #include "lib.h"
@@ -27,7 +28,7 @@ void ip_setchksum(struct ip *iphdr)
 	iphdr->ip_cksum = ip_chksum((unsigned short *)iphdr, iphlen(iphdr));
 }
 
-void ip_recv(struct pkbuf *pkb)
+void ip_recv_local(struct pkbuf *pkb)
 {
 	struct ip *iphdr = pkb2ip(pkb);
 
@@ -89,36 +90,25 @@ void ip_send_dev(struct netdev *dev, struct pkbuf *pkb, unsigned int dst)
 	}
 }
 
-static unsigned short ipid = 0;
-
-/* assert: pkb data is net-order & pkb->pk_pro == ETH_P_IP */
-void ip_send(struct pkbuf *pkb, int fwd)
+/* Assert pkb is net-order & pkb->pk_pro == ETH_P_IP */
+void ip_send_out(struct pkbuf *pkb)
 {
 	struct ip *iphdr = pkb2ip(pkb);
 	struct rtentry *rt;
 	unsigned int dst;
 
-	ipdbg(IPFMT " -> " IPFMT "(%d/%d bytes) %s",
-				ipfmt(iphdr->ip_src), ipfmt(iphdr->ip_dst),
-				iphlen(iphdr), ntohs(iphdr->ip_len),
-				fwd ? "forwarding" : "");
-	/* ip routing */
-	rt = rt_lookup(iphdr->ip_dst);
-	if (!rt) {
-		ipdbg("No route entry");
-		free_pkb(pkb);
-		/* FIXME: if (fwd) icmp dest unreachable */
+	if (rt_output(pkb) < 0)
 		return;
-	}
-	if (rt->rt_net == 0 || rt->rt_metric > 0)	/* default route or remote dst */
+	ip_setchksum(iphdr);
+	rt = pkb->pk_rtdst;
+	/* default route or remote dst */
+	if ((rt->rt_flags & RT_DEFAULT) || rt->rt_metric > 0)
 		dst = rt->rt_gw;
 	else
 		dst = iphdr->ip_dst;
-	ipdbg("routing to next-hop: " IPFMT, ipfmt(dst));
-	if (!fwd) {
-		iphdr->ip_src = rt->rt_dev->_net_ipaddr;
-		ip_setchksum(iphdr);
-	}
+	ipdbg(IPFMT " -> " IPFMT "(%d/%d bytes) next-hop: " IPFMT,
+			ipfmt(iphdr->ip_src), ipfmt(iphdr->ip_dst),
+			iphlen(iphdr), ntohs(iphdr->ip_len), ipfmt(dst));
 	/* ip fragment */
 	if (ntohs(iphdr->ip_len) > rt->rt_dev->net_mtu)
 		ip_send_frag(rt->rt_dev, pkb, dst);
@@ -126,6 +116,7 @@ void ip_send(struct pkbuf *pkb, int fwd)
 		ip_send_dev(rt->rt_dev, pkb, dst);
 }
 
+static unsigned short ipid = 0;
 void ip_send_info(struct pkbuf *pkb, unsigned char tos, unsigned short len,
 		unsigned char ttl, unsigned char pro, unsigned int dst)
 {
@@ -142,35 +133,98 @@ void ip_send_info(struct pkbuf *pkb, unsigned char tos, unsigned short len,
 	iphdr->ip_pro = pro;
 	iphdr->ip_dst = dst;
 
-	ip_send(pkb, 0);
+	ip_send_out(pkb);
 }
 
-void ip_forward(struct netdev *nd, struct pkbuf *pkb)
+/* Assert pkb is net-order */
+void ip_forward(struct pkbuf *pkb)
 {
 	struct ip *iphdr = pkb2ip(pkb);
-	struct rtentry *rt;
+	struct rtentry *rt = pkb->pk_rtdst;
+	struct netdev *indev = pkb->pk_indev;
+	unsigned int dst;
 #ifdef CONFIG_TOP1
 	ipdbg("host doesnt support forward!");
-	free_pkb(pkb);
-	return;
+	goto drop_pkb;
 #endif
-	if (--iphdr->ip_ttl <= 0) {
-		free_pkb(pkb);
-		/* FIXME: icmp timeout */
-		return;
+	ipdbg(IPFMT " -> " IPFMT "(%d/%d bytes) forwarding",
+				ipfmt(iphdr->ip_src), ipfmt(iphdr->ip_dst),
+				iphlen(iphdr), ntohs(iphdr->ip_len));
+
+	if (iphdr->ip_ttl <= 1) {
+		icmp_send(ICMP_T_TIMEEXCEED, ICMP_EXC_TTL, 0, pkb);
+		goto drop_pkb;
 	}
+
 	/* FIXME: ajacent checksum for decreased ttl */
+	iphdr->ip_ttl--;
 	ip_setchksum(iphdr);
-	ip_send(pkb, 1);
+
+	/* default route or remote dst */
+	if ((rt->rt_flags & RT_DEFAULT) || rt->rt_metric > 0)
+		dst = rt->rt_gw;
+	else
+		dst = iphdr->ip_dst;
+	ipdbg("forward to next-hop "IPFMT, ipfmt(dst));
+	if (indev == rt->rt_dev) {
+		/*
+		 * ICMP REDIRECT conditions(RFC 1812):
+		 * 1. The packet is being forwarded out the same physical
+		 *    interface that it was received from.
+		 * 2. The IP source address in the packet is on the same Logical IP
+		 *    (sub)network as the next-hop IP address.
+		 * 3. The packet does not contain an IP source route option.
+		 *    (Not implemented)
+		 */
+		struct rtentry *srt = rt_lookup(iphdr->ip_src);
+		if (srt && srt->rt_metric == 0 &&
+			equsubnet(srt->rt_netmask, iphdr->ip_src, dst)) {
+			if (srt->rt_dev != indev) {
+				ipdbg("Two NIC are connected to the same LAN");
+			}
+			icmp_send(ICMP_T_REDIRECT, ICMP_REDIRECT_HOST, dst, pkb);
+		}
+	}
+	/* ip fragment */
+	if (ntohs(iphdr->ip_len) > rt->rt_dev->net_mtu) {
+		if (iphdr->ip_fragoff & htons(IP_FRAG_DF)) {
+			icmp_send(ICMP_T_DESTUNREACH, ICMP_FRAG_NEEDED, 0, pkb);
+			goto drop_pkb;
+		}
+		ip_send_frag(rt->rt_dev, pkb, dst);
+	} else {
+		ip_send_dev(rt->rt_dev, pkb, dst);
+	}
+	return;
+drop_pkb:
+	free_pkb(pkb);
 }
 
-void ip_in(struct netdev *nd, struct pkbuf *pkb)
+void ip_recv_route(struct pkbuf *pkb)
+{
+	if (rt_input(pkb) < 0)
+		return;
+	/* Is this packet sent to us? */
+	if (pkb->pk_rtdst->rt_flags & RT_LOCALHOST) {
+		ip_recv_local(pkb);
+	} else {
+		ip_hton(pkb2ip(pkb));
+		ip_forward(pkb);
+	}
+}
+
+void ip_in(struct netdev *dev, struct pkbuf *pkb)
 {
 	struct ether *ehdr = (struct ether *)pkb->pk_data;
 	struct ip *iphdr = (struct ip *)ehdr->eth_data;
 	int hlen;
 
 	/* Fussy sanity check */
+	if (pkb->pk_type == PKT_OTHERHOST) {
+		ipdbg("ip(l2) packet is not for us");
+		goto err_free_pkb;
+	}
+
 	if (pkb->pk_len < ETH_HRD_SZ + IP_HRD_SZ) {
 		ipdbg("ip packet is too small");
 		goto err_free_pkb;
@@ -206,12 +260,7 @@ void ip_in(struct netdev *nd, struct pkbuf *pkb)
 	ipdbg(IPFMT " -> " IPFMT "(%d/%d bytes)",
 				ipfmt(iphdr->ip_src), ipfmt(iphdr->ip_dst),
 				hlen, iphdr->ip_len);
-	/* Is this packet sent to us? */
-	if (iphdr->ip_dst != nd->_net_ipaddr) {
-		ip_hton(iphdr);
-		ip_forward(nd, pkb);
-	} else
-		ip_recv(pkb);
+	ip_recv_route(pkb);
 	return;
 
 err_free_pkb:
