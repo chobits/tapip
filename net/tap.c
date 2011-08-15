@@ -19,6 +19,16 @@
 
 static int skfd, skfd6;
 
+int setpersist_tap(int fd)
+{
+	/* if EBUSY, we donot set persist to tap */
+	if (!errno && ioctl(fd, TUNSETPERSIST, 1) < 0) {
+		perror("ioctl TUNSETPERSIST");
+		return -1;
+	}
+	return 0;
+}
+
 void setnetmask_tap(char *name, unsigned int netmask)
 {
 	struct ifreq ifr = {};

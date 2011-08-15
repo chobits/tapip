@@ -112,7 +112,7 @@ void send_packet(void)
 	icmphdr->icmp_cksum = icmp_chksum((unsigned char *)icmphdr,
 			ICMP_HRD_SZ + size);
 	printf(IPFMT" send to "IPFMT" id %d seq %d ttl %d\n",
-			ipfmt(iphdr->ip_src),
+			ipfmt(veth->net_ipaddr),
 			ipfmt(ipaddr),
 			id,
 			ntohs(icmphdr->icmp_seq),
@@ -145,9 +145,9 @@ void ping(int argc, char **argv)
 	/* signal install */
 	signal(SIGALRM, sigalrm);
 	/* send packet and debug */
-	net_debug |= NET_DEBUG_ICMP;
+	net_debug |= NET_DEBUG_ARP|NET_DEBUG_IP|NET_DEBUG_ICMP;
 	sigalrm(SIGALRM);
 	alarm(0);
-	net_debug &= ~NET_DEBUG_ICMP;
+	net_debug = 0;
 	printf("\n");
 }

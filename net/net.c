@@ -1,7 +1,6 @@
 /*
  * special net device independent L2 code
  */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -20,80 +19,6 @@
 #include "lib.h"
 #include "netcfg.h"
 
-extern void net_in(struct netdev *, struct pkbuf *);
-struct netdev *veth;	/* virtual ethernet card device */
-
-void netdev_interrupt(void)
-{
-	netdev_poll(veth);
-}
-
-/* only create one virtual net device */
-void netdev_init(void)
-{
-	veth = netdev_alloc("veth0");
-	if (!veth) {
-		fprintf(stderr, "net device cannot be inited.\n");
-		exit(EXIT_FAILURE);
-	}
-	netdev_fillinfo(veth);
-	/* fake information for our netstack */
-	veth->_net_mask = FAKE_NETMASK;
-	veth->_net_ipaddr = FAKE_IPADDR;
-	hwacpy(veth->_net_hwaddr, FAKE_HWADDR);
-	dbg("network ip address: " IPFMT, ipfmt(veth->_net_ipaddr));
-	dbg("network hw address: " MACFMT, macfmt(veth->_net_hwaddr));
-	/* init stats */
-	veth->net_stats.rx_packets = 0;
-	veth->net_stats.tx_bytes = 0;
-	veth->net_stats.rx_packets = 0;
-	veth->net_stats.tx_bytes = 0;
-}
-
-void netdev_exit(void)
-{
-	if (veth)
-		netdev_free(veth);
-}
-
-void netdev_rx(struct netdev *dev)
-{
-	struct pkbuf *pkb;
-	pkb = alloc_netdev_pkb(dev);
-	if (netdev_recv(dev, pkb) > 0)
-		net_in(dev, pkb);
-	else
-		free_pkb(pkb);
-	/*
-	 * Dont call free_pkb(pkb), we follow the rule:
-	 * Who uses packet, who kills it!
-	 */
-}
-
-#ifdef DEBUG_PKB
-void _netdev_tx(struct netdev *dev, struct pkbuf *pkb, int len,
-		unsigned short proto, unsigned char *dst)
-#else
-void netdev_tx(struct netdev *dev, struct pkbuf *pkb, int len,
-		unsigned short proto, unsigned char *dst)
-#endif
-{
-	struct ether *ehdr = (struct ether *)pkb->pk_data;
-
-	/* first copy to eth_dst, maybe eth_src will be copied to eth_dst */
-	hwacpy(ehdr->eth_dst, dst);
-	hwacpy(ehdr->eth_src, dev->_net_hwaddr);
-	ehdr->eth_pro = htons(proto);
-
-	l2dbg(MACFMT " -> " MACFMT "(%s)",
-				macfmt(ehdr->eth_src),
-				macfmt(ehdr->eth_dst),
-				ethpro(proto));
-
-	netdev_send(dev, pkb, len + sizeof(struct ether));
-	free_pkb(pkb);
-}
-
 /* referred to eth_trans_type() in linux */
 static struct ether *eth_init(struct netdev *dev, struct pkbuf *pkb)
 {
@@ -109,7 +34,7 @@ static struct ether *eth_init(struct netdev *dev, struct pkbuf *pkb)
 			pkb->pk_type = PKT_BROADCAST;
 		else
 			pkb->pk_type = PKT_MULTICAST;
-	} else if (!hwacmp(ehdr->eth_dst, dev->_net_hwaddr)) {
+	} else if (!hwacmp(ehdr->eth_dst, dev->net_hwaddr)) {
 			pkb->pk_type = PKT_LOCALHOST;
 	} else {
 			pkb->pk_type = PKT_OTHERHOST;

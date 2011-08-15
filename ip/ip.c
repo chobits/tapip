@@ -70,7 +70,7 @@ void ip_send_dev(struct netdev *dev, struct pkbuf *pkb, unsigned int dst)
 	struct arpentry *ae;
 	ae = arp_lookup(ETH_P_IP, dst);
 	if (!ae) {
-		ipdbg("not found arp entry");
+		arpdbg("not found arp cache");
 		ae = arp_alloc();
 		if (!ae) {
 			ipdbg("arp cache is full");
@@ -82,7 +82,7 @@ void ip_send_dev(struct netdev *dev, struct pkbuf *pkb, unsigned int dst)
 		list_add_tail(&pkb->pk_list, &ae->ae_list);
 		arp_request(ae);
 	} else if (ae->ae_state == ARP_WAITING) {
-		ipdbg("arp entry is waiting");
+		arpdbg("arp entry is waiting");
 		list_add_tail(&pkb->pk_list, &ae->ae_list);
 	} else {
 		netdev_tx(dev, pkb, pkb->pk_len - ETH_HRD_SZ,
@@ -106,7 +106,7 @@ void ip_send_out(struct pkbuf *pkb)
 		dst = rt->rt_gw;
 	else
 		dst = iphdr->ip_dst;
-	ipdbg(IPFMT " -> " IPFMT "(%d/%d bytes) next-hop: " IPFMT,
+	ipdbg(IPFMT " -> " IPFMT "(%d/%d bytes) \nnext-hop: " IPFMT,
 			ipfmt(iphdr->ip_src), ipfmt(iphdr->ip_dst),
 			iphlen(iphdr), ntohs(iphdr->ip_len), ipfmt(dst));
 	/* ip fragment */

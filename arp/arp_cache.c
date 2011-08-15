@@ -93,7 +93,8 @@ struct arpentry *arp_alloc(void)
 	}
 	/* not found */
 	if (i >= ARP_CACHE_SZ) {
-		dbg("arp cache is full");
+		arpdbg("arp cache is full");
+		arp_cache_unlock();
 		return NULL;
 	}
 	/* init */

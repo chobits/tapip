@@ -7,6 +7,7 @@
 #include "arp.h"
 #include "lib.h"
 #include "route.h"
+#include "netcfg.h"
 
 unsigned int net_debug = 0;
 
@@ -66,22 +67,28 @@ void ifconfig(int argc, char **argv)
 {
 	printf("%-10sHWaddr "MACFMT"\n"
 		"          IPaddr "IPFMT"\n"
-		"          mtu %d\n",
+		"          mtu %d\n"
+		"          RX packet:%u bytes:%u errors:%u\n"
+		"          TX packet:%u bytes:%u errors:%u\n",
 		veth->net_name,
 		macfmt(veth->net_hwaddr),
 		ipfmt(veth->net_ipaddr),
-		veth->net_mtu);
-	printf("netstack  HWaddr "MACFMT"\n"
-		"          IPaddr "IPFMT"\n"
-		"          RX packet:%u bytes:%u errors:%u\n"
-		"          TX packet:%u bytes:%u errors:%u\n",
-		macfmt(veth->_net_hwaddr),
-		ipfmt(veth->_net_ipaddr),
+		veth->net_mtu,
 		veth->net_stats.rx_packets,
 		veth->net_stats.rx_bytes,
 		veth->net_stats.rx_errors,
 		veth->net_stats.tx_packets,
 		veth->net_stats.tx_bytes,
 		veth->net_stats.tx_errors);
+#ifndef CONFIG_TOP1
+	printf("---[ Non local for ./net_stack ]------\n"
+		"%-10sHWaddr "MACFMT"\n"
+		"          IPaddr "IPFMT"\n"
+		"          mtu %d\n",
+		tap->dev.net_name,
+		macfmt(tap->dev.net_hwaddr),
+		ipfmt(tap->dev.net_ipaddr),
+		tap->dev.net_mtu);
+#endif
 }
 

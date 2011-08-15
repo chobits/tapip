@@ -5,6 +5,8 @@
 #include "route.h"
 #include "list.h"
 
+#include "netcfg.h"
+
 static LIST_HEAD(rt_head);
 
 struct rtentry *rt_lookup(unsigned int ipaddr)
@@ -56,11 +58,11 @@ void rt_add(unsigned int net, unsigned int netmask, unsigned int gw,
 void rt_init(void)
 {
 	/* local host */
-	rt_add(veth->_net_ipaddr, 0xffffffff, 0, 0, RT_LOCALHOST, veth);
+	rt_add(veth->net_ipaddr, 0xffffffff, 0, 0, RT_LOCALHOST, veth);
 	/* local net */
-	rt_add(LOCALNET(veth), veth->_net_mask, 0, 0, RT_NONE, veth);
+	rt_add(LOCALNET(veth), veth->net_mask, 0, 0, RT_NONE, veth);
 	/* default route: next-hop is tap ipaddr */
-//	rt_add(0, 0, veth->net_ipaddr, 0, RT_DEFAULT, veth);
+	rt_add(0, 0, veth->net_ipaddr, 0, RT_DEFAULT, veth);
 	dbg("route table init");
 }
 
@@ -70,6 +72,7 @@ int rt_input(struct pkbuf *pkb)
 	struct ip *iphdr = pkb2ip(pkb);
 	struct rtentry *rt = rt_lookup(iphdr->ip_dst);
 	if (!rt) {
+#ifndef CONFIG_TOP1
 		/*
 		 * RFC 1812 #4.3.3.1
 		 * If a router cannot forward a packet because it has no routes
@@ -80,6 +83,7 @@ int rt_input(struct pkbuf *pkb)
 		 */
 		ip_hton(iphdr);
 		icmp_send(ICMP_T_DESTUNREACH, ICMP_NET_UNREACH, 0, pkb);
+#endif
 		free_pkb(pkb);
 		return -1;
 	}
@@ -99,7 +103,7 @@ int rt_output(struct pkbuf *pkb)
 		return -1;
 	}
 	pkb->pk_rtdst = rt;
-	iphdr->ip_src = rt->rt_dev->_net_ipaddr;
+	iphdr->ip_src = rt->rt_dev->net_ipaddr;
 	return 0;
 }
 

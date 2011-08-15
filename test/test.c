@@ -51,6 +51,7 @@ void net_stack_exit(void)
 		perror("kill child 0");
 	if (pthread_cancel(threads[1]))
 		perror("kill child 1");
+	netdev_exit();
 }
 
 int main(int argc, char **argv)

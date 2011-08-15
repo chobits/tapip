@@ -5,6 +5,8 @@
 #define NETDEV_NLEN	16	/* IFNAMSIZ */
 
 #include "list.h"
+struct pkbuf;
+struct netdev;
 
 struct netstats {
 	unsigned int rx_packets;
@@ -15,22 +17,32 @@ struct netstats {
 	unsigned int tx_bytes;
 };
 
+struct netdev_ops {
+	int (*xmit)(struct netdev *, struct pkbuf *);
+	int (*init)(struct netdev *);
+	void (*exit)(struct netdev *);
+};
+
 /* network interface device */
 struct netdev {
 	/* tap device information */
-	int net_fd;				/* virtual netif file descriptor */
 	int net_mtu;
 	unsigned int  net_ipaddr;		/* dev binding ip address */
+	unsigned int net_mask;			/* netmask */
 	unsigned char net_hwaddr[NETDEV_ALEN];	/* hardware address */
 	unsigned char net_name[NETDEV_NLEN];	/* device name */
-	/* our netstack information */
-	unsigned int _net_mask;			/* local(fake) netmask */
-	unsigned int _net_ipaddr;		/* local(fake) ip address */
-	unsigned char _net_hwaddr[NETDEV_ALEN];	/* local(fake) hardware address */
+	struct netdev_ops *net_ops;		/* Nic Operation */
 	struct netstats net_stats;		/* protocol independent statistic */
 };
-#define LOCALNET(dev) ((dev)->_net_ipaddr & (dev)->_net_mask)
+#define LOCALNET(dev) ((dev)->net_ipaddr & (dev)->net_mask)
 
+/* tap device */
+struct tapdev {
+	struct netdev dev;
+	int fd;
+};
+
+/* packet buf */
 struct pkbuf {
 	struct list_head pk_list;	/* for ip fragment or arp waiting list */
 	unsigned short pk_pro;		/* ethernet packet type ID */
@@ -67,17 +79,14 @@ static inline unsigned int htonl(unsigned int host)
 
 #endif	/* HOST_LITTLE_ENDIAN */
 
+extern struct tapdev *tap;
 extern struct netdev *veth;
 
-extern struct netdev *netdev_alloc(char *dev);
+extern struct netdev *netdev_alloc(char *dev, struct netdev_ops *);
 extern void netdev_free(struct netdev *nd);
-extern void netdev_fillinfo(struct netdev *nd);
-extern void netdev_send(struct netdev *nd, struct pkbuf *pkb, int len);
-extern int netdev_recv(struct netdev *nd, struct pkbuf *pkb);
-extern void netdev_poll(struct netdev *nd);
+extern void netdev_interrupt(void);
 
 extern void net_timer(void);
-extern void netdev_interrupt(void);
 
 extern struct pkbuf *alloc_pkb(int size);
 extern struct pkbuf *alloc_netdev_pkb(struct netdev *nd);

@@ -33,10 +33,15 @@ void arp_request(struct arpentry *ae)
 	ahdr->arp_prolen = IP_ALEN;
 	ahdr->arp_op = htons(ARP_OP_REQUEST);
 	/* address */
-	ahdr->arp_sip = ae->ae_dev->_net_ipaddr;
-	hwacpy(ahdr->arp_sha, ae->ae_dev->_net_hwaddr);
+	ahdr->arp_sip = ae->ae_dev->net_ipaddr;
+	hwacpy(ahdr->arp_sha, ae->ae_dev->net_hwaddr);
 	ahdr->arp_tip = ae->ae_ipaddr;
 	hwacpy(ahdr->arp_tha, BRD_HWADDR);
+
+	arpdbg(IPFMT"("MACFMT")->"IPFMT"(request)",
+				ipfmt(ahdr->arp_sip),
+				macfmt(ahdr->arp_sha),
+				ipfmt(ahdr->arp_tip));
 	netdev_tx(ae->ae_dev, pkb, pkb->pk_len - ETH_HRD_SZ, ETH_P_ARP, BRD_HWADDR);
 }
 
@@ -89,7 +94,7 @@ void arp_in(struct netdev *dev, struct pkbuf *pkb)
 		goto err_free_pkb;
 	}
 
-	if (ahdr->arp_tip != dev->_net_ipaddr) {
+	if (ahdr->arp_tip != dev->net_ipaddr) {
 		arpdbg("not for us");
 		goto err_free_pkb;
 	}
@@ -113,8 +118,8 @@ void arp_in(struct netdev *dev, struct pkbuf *pkb)
 		ahdr->arp_op = ARP_OP_REPLY;
 		hwacpy(ahdr->arp_tha, ahdr->arp_sha);
 		ahdr->arp_tip = ahdr->arp_sip;
-		hwacpy(ahdr->arp_sha, dev->_net_hwaddr);
-		ahdr->arp_sip = dev->_net_ipaddr;
+		hwacpy(ahdr->arp_sha, dev->net_hwaddr);
+		ahdr->arp_sip = dev->net_ipaddr;
 		arp_ntoh(ahdr);
 		/* ether field */
 		netdev_tx(dev, pkb, ARP_HRD_SZ, ETH_P_ARP, ehdr->eth_src);

@@ -1,20 +1,8 @@
 /*
  *  Lowest net device code:
- *    virtual net device driver based on tap device
+ *    independent net device layer
  */
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <fcntl.h>
 #include <string.h>
-#include <sys/ioctl.h>
-#include <errno.h>
-#include <poll.h>
-
-#include <net/if.h>
-#include <linux/in.h>
-#include <linux/socket.h>
-#include <linux/if_tun.h>
 
 #include "netif.h"
 #include "ether.h"
@@ -23,94 +11,64 @@
 #include "netcfg.h"
 
 /* Altough dev is already created, this function is safe! */
-struct netdev *netdev_alloc(char *dev)
+struct netdev *netdev_alloc(char *devstr, struct netdev_ops *netops)
 {
-	struct netdev *nd;
-	nd = xmalloc(sizeof(*nd));
-
-	/* create virtual device: tap */
-	nd->net_fd = alloc_tap(dev);
-	if (nd->net_fd < 0) {
-		perror("alloc_tap");
-		goto err_alloc_tap;
-	}
-	/* if EBUSY, we donot set persist to tap */
-	if (!errno && ioctl(nd->net_fd, TUNSETPERSIST, 1) < 0) {
-		perror("ioctl TUNSETPERSIST");
-		goto err_alloc_tap;
-	}
-	return nd;
-err_alloc_tap:
-	free(nd);
-	return NULL;
+	struct netdev *dev;
+	dev = xmalloc(sizeof(*dev));
+	memset(dev, 0x0, sizeof(*dev));
+	dev->net_name[NETDEV_NLEN - 1] = '\0';
+	strncpy(dev->net_name, devstr, NETDEV_NLEN - 1);
+	dev->net_ops = netops;
+	if (netops->init)
+		netops->init(dev);
+	return dev;
 }
 
-void netdev_free(struct netdev *nd)
+void netdev_free(struct netdev *dev)
 {
-	if (nd->net_fd > 0)
-		delete_tap(nd->net_fd);
-	free(nd);
+	if (dev->net_ops && dev->net_ops->exit)
+		dev->net_ops->exit(dev);
+	free(dev);
 }
 
-void netdev_fillinfo(struct netdev *nd)
+void netdev_interrupt(void)
 {
-	set_tap();
-	getname_tap(nd->net_fd, nd->net_name);
-	gethwaddr_tap(nd->net_fd, nd->net_hwaddr);
-	getmtu_tap(nd->net_name, &nd->net_mtu);
-	setipaddr_tap(nd->net_name, FAKE_TAP_ADDR);
-	getipaddr_tap(nd->net_name, &nd->net_ipaddr);
-	setnetmask_tap(nd->net_name, FAKE_TAP_NETMASK);
-	setup_tap(nd->net_name);
-	unset_tap();
+	veth_poll();
 }
 
-void netdev_send(struct netdev *nd, struct pkbuf *pkb, int len)
+/* only create one virtual net device */
+void netdev_init(void)
 {
-	int l;
-	l = write(nd->net_fd, pkb->pk_data, len);
-	if (l != len) {
-		dbg("write net dev");
-		nd->net_stats.tx_errors++;
-	} else {
-		nd->net_stats.tx_packets++;
-		nd->net_stats.tx_bytes += l;
-		devdbg("write net dev size: %d\n", l);
-	}
+	veth_init();
 }
 
-int netdev_recv(struct netdev *nd, struct pkbuf *pkb)
+void netdev_exit(void)
 {
-	int l;
-	l = read(nd->net_fd, pkb->pk_data, nd->net_mtu + sizeof(struct ether));
-	if (l < 0) {
-		perror("read net dev");
-		nd->net_stats.rx_errors++;
-	} else {
-		pkb->pk_len = l;
-		nd->net_stats.rx_packets++;
-		nd->net_stats.rx_bytes += l;
-		devdbg("read net dev size: %d\n", l);
-	}
-
-	return l;
+	veth_exit();
 }
 
-void netdev_poll(struct netdev *nd)
+#ifdef DEBUG_PKB
+void _netdev_tx(struct netdev *dev, struct pkbuf *pkb, int len,
+		unsigned short proto, unsigned char *dst)
+#else
+void netdev_tx(struct netdev *dev, struct pkbuf *pkb, int len,
+		unsigned short proto, unsigned char *dst)
+#endif
 {
-	struct pollfd pfd = {};
-	int ret;
+	struct ether *ehdr = (struct ether *)pkb->pk_data;
 
-	while (1) {
-		pfd.fd = nd->net_fd;
-		pfd.events = POLLIN;
-		pfd.revents = 0;
+	/* first copy to eth_dst, maybe eth_src will be copied to eth_dst */
+	hwacpy(ehdr->eth_dst, dst);
+	hwacpy(ehdr->eth_src, dev->net_hwaddr);
+	ehdr->eth_pro = htons(proto);
 
-		/* one event, infinite time */
-		ret = poll(&pfd, 1, -1);
-		if (ret <= 0)
-			perrx("poll /dev/net/tun");
-		/* get a packet */
-		netdev_rx(nd);
-	}
+	l2dbg(MACFMT " -> " MACFMT "(%s)",
+				macfmt(ehdr->eth_src),
+				macfmt(ehdr->eth_dst),
+				ethpro(proto));
+	pkb->pk_len = len + ETH_HRD_SZ;
+	/* real transmit packet */
+	dev->net_ops->xmit(dev, pkb);
+	free_pkb(pkb);
 }
+
