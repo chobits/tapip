@@ -31,12 +31,13 @@ real network of TOP1
         |
        br0 (0.0.0.0)
         |
-      veth0 [tap device]
+       tap0
       (0.0.0.0)
         |
       /dev/net/tun
         |
-      usermode (10.20.133.21)
+      veth0 (10.20.133.21)
+      usermode
       network
 
 =============================================================================
@@ -123,33 +124,33 @@ TOP2
        |                 (write) |        . (read)
        |                        \|/      /|\
        |                         '        |
-      veth0<--- netif_rx() -----/dev/net/tun
+     tap0 <---- netif_rx() -----/dev/net/tun
 (10.0.0.2) `-- tun_net_xmit() ------------^
 
 
 =============================================================================
 arping model of TOP2
 
-veth0
+ tap0
 (10.0.0.2)
 
 route:
 Destination  Use Iface
-10.0.0.0     veth0
+10.0.0.0     tap0
 
 
-arping 10.0.0.1 --> socket send --> route --> veth0 --> veth0::dev_hard_xmit
+arping 10.0.0.1 --> socket send --> route -->  tap0 -->  tap0::dev_hard_xmit
                  ( arp packet:                              |
                   10.0.0.2 request                          |
-                  hwaddr of 10.0.0.1)                       |         _veth0 (10.0.0.2)_
+                  hwaddr of 10.0.0.1)                       |         _tap0 (10.0.0.2)_
                                                             |
-arping received <-- socket recv <-- veth0(netif_rx) <----.  |
+arping received <-- socket recv <--  tap0(netif_rx) <----.  |
                                                          |  |
                                                      /dev/net/tun
                                                          |  |
                                                 (write)  |  |  (read)
                                                          |  |
-                          .--------> reply --> netdev_tx-'  |         _netstack (10.0.0.1)_
+                          .--------> reply --> netdev_tx-'  |         _veth (10.0.0.1)_
                           |                                \|/
                           |                                 '
                           '- arp_in <-- netif_in <-----  process
@@ -157,8 +158,8 @@ arping received <-- socket recv <-- veth0(netif_rx) <----.  |
 
 [ route module and netif_rx() are from linux kernel ]
 
-NOTE: 10.0.0.2 is veth0 ip address, not our network stack ip address.
-Our network stack is `outside network` in terms of veth0,
+NOTE: 10.0.0.2 is  tap0 ip address, not our network stack ip address.
+Our network stack(veth) is `outside network` in terms of tap0,
 so our program is just an emulator of outside network,
-we must assign a fake ip address(10.0.0.1) for our program ./net_stack !
+we must assign a fake ip address(10.0.0.1) for ./net_stack virtual netif veth !
 
