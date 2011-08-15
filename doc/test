@@ -52,3 +52,33 @@
 	(waiting debug information)
 
 (tom)	tom # ping 10.0.1.1
+
+================================================
+5. test:
+	1.icmp redirect
+	2.icmp time exceeded(ttl)
+
+(bob)	bob # sudo route add -host 10.0.0.3 gw 10.0.0.1 veth0
+	bob # sudo ./net_stack
+	[net shell]: debug ip icmp
+	(waiting debug information)
+
+(tom)	tom # ping 10.0.0.3 -c 1
+	(waiting redirect reply)
+	tom # ping 10.0.0.3 -c 1 -t 1
+	(waiting time exceeded reply)
+
+================================================
+6. test icmp defragment timeout
+
+(bob)	bob # (write #define ICMP_EXC_FRAGTIME_TEST into include/netcfg.h)
+	bob # sudo ./net_stack
+	[net shell]: debug ip icmp
+	(waiting debug information)
+
+(tom)	tom # ping 10.0.0.1 -c 5 -s 60000
+	(waiting frag reassembly time exceeded reply)
+
+================================================
+7. test icmp fragment needed
+
