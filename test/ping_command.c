@@ -70,7 +70,7 @@ static int parse_args(int argc, char **argv)
 		}
 	}
 	if (size < 0 || size > 65507) {
-		printf("packet size %d is too large. Maximum is 65507\n");
+		printf("Packet size %d is too large. Maximum is 65507\n", size);
 		return -2;
 	}
 	if (ttl < 0 || ttl > 255) {
@@ -111,7 +111,8 @@ void send_packet(void)
 	icmphdr->icmp_cksum = 0;
 	icmphdr->icmp_cksum = icmp_chksum((unsigned char *)icmphdr,
 			ICMP_HRD_SZ + size);
-	printf("send to "IPFMT" id %d seq %d ttl %d\n",
+	printf(IPFMT" send to "IPFMT" id %d seq %d ttl %d\n",
+			ipfmt(iphdr->ip_src),
 			ipfmt(ipaddr),
 			id,
 			ntohs(icmphdr->icmp_seq),
