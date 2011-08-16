@@ -5,18 +5,6 @@
 
 #define BRD_HWADDR "\xff\xff\xff\xff\xff\xff"
 
-void arp_queue_send(struct arpentry *ae)
-{
-	struct pkbuf *pkb;
-	while (!list_empty(&ae->ae_list)) {
-		pkb = list_first_entry(&ae->ae_list, struct pkbuf, pk_list);
-		list_del(ae->ae_list.next);
-		arpdbg("send pending packet");
-		netdev_tx(ae->ae_dev, pkb, pkb->pk_len - ETH_HRD_SZ,
-				pkb->pk_pro, ae->ae_hwaddr);
-	}
-}
-
 void arp_request(struct arpentry *ae)
 {
 	struct pkbuf *pkb;
@@ -43,6 +31,63 @@ void arp_request(struct arpentry *ae)
 				macfmt(ahdr->arp_sha),
 				ipfmt(ahdr->arp_tip));
 	netdev_tx(ae->ae_dev, pkb, pkb->pk_len - ETH_HRD_SZ, ETH_P_ARP, BRD_HWADDR);
+}
+
+void arp_reply(struct netdev *dev, struct pkbuf *pkb)
+{
+	struct ether *ehdr = (struct ether *)pkb->pk_data;
+	struct arp *ahdr = (struct arp *)ehdr->eth_data;
+	arpdbg("replying arp request");
+	/* arp field */
+	ahdr->arp_op = ARP_OP_REPLY;
+	hwacpy(ahdr->arp_tha, ahdr->arp_sha);
+	ahdr->arp_tip = ahdr->arp_sip;
+	hwacpy(ahdr->arp_sha, dev->net_hwaddr);
+	ahdr->arp_sip = dev->net_ipaddr;
+	arp_ntoh(ahdr);
+	/* ether field */
+	netdev_tx(dev, pkb, ARP_HRD_SZ, ETH_P_ARP, ehdr->eth_src);
+}
+
+void arp_recv(struct netdev *dev, struct pkbuf *pkb)
+{
+	struct ether *ehdr = (struct ether *)pkb->pk_data;
+	struct arp *ahdr = (struct arp *)ehdr->eth_data;
+	struct arpentry *ae;
+
+	/* real arp process */
+	arpdbg(IPFMT " -> " IPFMT, ipfmt(ahdr->arp_sip), ipfmt(ahdr->arp_tip));
+
+	/* drop multi target ip(refer to linux) */
+	if (MULTICAST(ahdr->arp_tip)) {
+		arpdbg("multicast tip");
+		goto free_pkb;
+	}
+
+	if (ahdr->arp_tip != dev->net_ipaddr) {
+		arpdbg("not for us");
+		goto free_pkb;
+	}
+
+	if (ae = arp_lookup(ahdr->arp_pro, ahdr->arp_sip)) {
+		/* passive learning(REQUST): update old arp entry in cache */
+		hwacpy(ae->ae_hwaddr, ahdr->arp_sha);
+		/* send waiting packet (maybe we receive arp reply) */
+		if (ae->ae_state = ARP_WAITING)
+			arp_queue_send(ae);
+		ae->ae_state = ARP_RESOLVED;
+		ae->ae_ttl = ARP_TIMEOUT;
+	} else if (ahdr->arp_op == ARP_OP_REQUEST) {
+		/* Unsolicited ARP reply is not accepted */
+		arp_insert(dev, ahdr->arp_pro, ahdr->arp_sip, ahdr->arp_sha);
+	}
+
+	if (ahdr->arp_op == ARP_OP_REQUEST) {
+		arp_reply(dev, pkb);
+		return;
+	}
+free_pkb:
+	free_pkb(pkb);
 }
 
 /*
@@ -85,47 +130,7 @@ void arp_in(struct netdev *dev, struct pkbuf *pkb)
 		goto err_free_pkb;
 	}
 
-	/* real arp process */
-	arpdbg(IPFMT " -> " IPFMT, ipfmt(ahdr->arp_sip), ipfmt(ahdr->arp_tip));
-
-	/* drop multi target ip(refer to linux) */
-	if (MULTICAST(ahdr->arp_tip)) {
-		arpdbg("multicast tip");
-		goto err_free_pkb;
-	}
-
-	if (ahdr->arp_tip != dev->net_ipaddr) {
-		arpdbg("not for us");
-		goto err_free_pkb;
-	}
-
-	if (ae = arp_lookup(ahdr->arp_pro, ahdr->arp_sip)) {
-		/* passive learning(REQUST): update old arp entry in cache */
-		hwacpy(ae->ae_hwaddr, ahdr->arp_sha);
-		/* send waiting packet (maybe we receive arp reply) */
-		if (ae->ae_state = ARP_WAITING)
-			arp_queue_send(ae);
-		ae->ae_state = ARP_RESOLVED;
-		ae->ae_ttl = ARP_TIMEOUT;
-	} else if (ahdr->arp_op == ARP_OP_REQUEST) {
-		/* Unsolicited ARP reply is not accepted */
-		arp_insert(dev, ahdr->arp_pro, ahdr->arp_sip, ahdr->arp_sha);
-	}
-
-	if (ahdr->arp_op == ARP_OP_REQUEST) {
-		arpdbg("replying arp request");
-		/* arp field */
-		ahdr->arp_op = ARP_OP_REPLY;
-		hwacpy(ahdr->arp_tha, ahdr->arp_sha);
-		ahdr->arp_tip = ahdr->arp_sip;
-		hwacpy(ahdr->arp_sha, dev->net_hwaddr);
-		ahdr->arp_sip = dev->net_ipaddr;
-		arp_ntoh(ahdr);
-		/* ether field */
-		netdev_tx(dev, pkb, ARP_HRD_SZ, ETH_P_ARP, ehdr->eth_src);
-	}
-
-	/* arp reply has been handled! */
+	arp_recv(dev, pkb);
 	return;
 err_free_pkb:
 	free_pkb(pkb);

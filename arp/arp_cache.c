@@ -78,6 +78,29 @@ static _inline void arp_cache_unlock(void)
 #endif
 #endif	/* end LOCK_SEM */
 
+void arp_queue_send(struct arpentry *ae)
+{
+	struct pkbuf *pkb;
+	while (!list_empty(&ae->ae_list)) {
+		pkb = list_first_entry(&ae->ae_list, struct pkbuf, pk_list);
+		list_del(ae->ae_list.next);
+		arpdbg("send pending packet");
+		netdev_tx(ae->ae_dev, pkb, pkb->pk_len - ETH_HRD_SZ,
+				pkb->pk_pro, ae->ae_hwaddr);
+	}
+}
+
+void arp_queue_drop(struct arpentry *ae)
+{
+	struct pkbuf *pkb;
+	while (!list_empty(&ae->ae_list)) {
+		pkb = list_first_entry(&ae->ae_list, struct pkbuf, pk_list);
+		list_del(ae->ae_list.next);
+		arpdbg("drop pending packet");
+		free_pkb(pkb);
+	}
+}
+
 struct arpentry *arp_alloc(void)
 {
 	static int next = 0;
@@ -166,6 +189,8 @@ void arp_timer(int delta)
 		if (ae->ae_ttl <= 0) {
 			if ((ae->ae_state == ARP_WAITING && --ae->ae_retry < 0)
 				|| ae->ae_state == ARP_RESOLVED) {
+				if (ae->ae_state == ARP_WAITING)
+					arp_queue_drop(ae);
 				ae->ae_state = ARP_FREE;
 			} else {
 				/* retry arp request */
