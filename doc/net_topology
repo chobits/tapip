@@ -1,5 +1,6 @@
 =============================================================================
 TOP1
+=============================================================================
 
 +----------+
 | internet |
@@ -43,8 +44,10 @@ real network of TOP1
 =============================================================================
 How to build net environment of TOP1
  # (add "#define CONFIG_TOP1 to ./include/netcfg.h")
- # ./doc/brctl.sh
+ # ./doc/brctl.sh open
  # ./net_stack
+ .....................
+ # ./doc/brctl.sh close
 
 =============================================================================
 kernel-usermode stream of TOP1 ( usermode network stack receiving packet )
@@ -69,11 +72,13 @@ softirq: net_rx_action() --> netif_receive_skb() --> handle_bridge()
    \|/
 dev_queue_xmit(skb) --> tun_net_xmit()
  [skb->dev == tap0]     1. put skb into tun's skbqueue
-                        2. wake up processes waiting for /dev/net/tun (read/poll)
+                        2. wake up process(./net_stack) waiting
+                                    for /dev/net/tun (read/poll)
                              |
                              |
                             \|/
                          process (read/poll)
+                       ( ./net_stack            )
                        { usermode network stack }
 
 
@@ -117,6 +122,7 @@ dev_queue_xmit(skb) --> {eth0 netdevice}_hard_xmit()
 
 =============================================================================
 TOP2
+=============================================================================
 
    localhost                   outside network
    kernel stack                usermode stack [ ./net_stack ]
@@ -138,22 +144,25 @@ route:
 Destination  Use Iface
 10.0.0.0     tap0
 
-
-arping 10.0.0.1 --> socket send --> route -->  tap0 -->  tap0::dev_hard_xmit
-                 ( arp packet:                              |
-                  10.0.0.2 request                          |
-                  hwaddr of 10.0.0.1)                       |         _tap0 (10.0.0.2)_
-                                                            |
-arping received <-- socket recv <--  tap0(netif_rx) <----.  |
-                                                         |  |
-                                                     /dev/net/tun
-                                                         |  |
-                                                (write)  |  |  (read)
-                                                         |  |
-                          .--------> reply --> netdev_tx-'  |         _veth (10.0.0.1)_
-                          |                                \|/
-                          |                                 '
-                          '- arp_in <-- netif_in <-----  process
+                  +-------------------[Linux kernel TCP/IP stack]---------------------+
+                  |                                                                   |
+arping 10.0.0.1 -----> socket send --> route -->  tap0 -->  tap0::dev_hard_xmit       |
+                  | ( arp packet:                              |                      |
+                  |  10.0.0.2 request                          |                      |
+                  |  hwaddr of 10.0.0.1)                       |   _tap0 (10.0.0.2)_  |
+                  |                                            |                      |
+arping received <----- socket recv <--  tap0(netif_rx) <----.  |                      |
+                  |                                         |  |                      |
+                  +-----------------------------------------|--|----------------------+
+                                                            |  |
+                                                        /dev/net/tun
+                                                            |  |
+                                                   (write)  |  |  (read)
+                                                            |  |
+                             .--------> reply --> netdev_tx-'  |   _veth (10.0.0.1)_
+                             |                                \|/
+                             |                                 '
+                             '- arp_in <-- netif_in <-----  process
         update arp cache <------'                   { usermode network stack }
 
 [ route module and netif_rx() are from linux kernel ]

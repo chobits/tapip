@@ -82,3 +82,14 @@
 ================================================
 7. test icmp fragment needed
 
+================================================
+8. test loopback device
+
+(bob)	bob # sudo ./net_stack
+	[net shell]: ping 10.0.0.1 -c1 -s65000
+	(waiting debug information)
+	[net shell]: ping 127.0.0.1
+	(waiting debug information)
+	[net shell]: ping 127.1.2.3
+	(waiting debug information)
+
