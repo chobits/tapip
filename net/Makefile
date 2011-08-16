@@ -5,6 +5,7 @@ CFLAGS = -I../include
 OBJS	=	net.o		\
 		netdev.o	\
 		veth.o		\
+		loop.o		\
 		pkb.o		\
 		tap.o
 
@@ -21,6 +22,8 @@ pkb.o:pkb.c
 tap.o:tap.c
 	$(CC) $(CFLAGS) -c $< -o $@
 veth.o:veth.c
+	$(CC) $(CFLAGS) -c $< -o $@
+loop.o:loop.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

@@ -65,9 +65,24 @@ void ip_recv_local(struct pkbuf *pkb)
 	}
 }
 
-void ip_send_dev(struct netdev *dev, struct pkbuf *pkb, unsigned int dst)
+void ip_send_dev(struct netdev *dev, struct pkbuf *pkb)
 {
 	struct arpentry *ae;
+	unsigned int dst;
+	struct rtentry *rt = pkb->pk_rtdst;
+
+	if (rt->rt_flags & RT_LOCALHOST) {
+		netdev_tx(dev, pkb, pkb->pk_len - ETH_HRD_SZ,
+					ETH_P_IP, dev->net_hwaddr);
+		return;
+	}
+
+	/* next-hop: default route or remote dst */
+	if ((rt->rt_flags & RT_DEFAULT) || rt->rt_metric > 0)
+		dst = rt->rt_gw;
+	else
+		dst = pkb2ip(pkb)->ip_dst;
+
 	ae = arp_lookup(ETH_P_IP, dst);
 	if (!ae) {
 		arpdbg("not found arp cache");
@@ -94,26 +109,17 @@ void ip_send_dev(struct netdev *dev, struct pkbuf *pkb, unsigned int dst)
 void ip_send_out(struct pkbuf *pkb)
 {
 	struct ip *iphdr = pkb2ip(pkb);
-	struct rtentry *rt;
-	unsigned int dst;
-
 	if (rt_output(pkb) < 0)
 		return;
 	ip_setchksum(iphdr);
-	rt = pkb->pk_rtdst;
-	/* default route or remote dst */
-	if ((rt->rt_flags & RT_DEFAULT) || rt->rt_metric > 0)
-		dst = rt->rt_gw;
-	else
-		dst = iphdr->ip_dst;
-	ipdbg(IPFMT " -> " IPFMT "(%d/%d bytes) \nnext-hop: " IPFMT,
+	ipdbg(IPFMT " -> " IPFMT "(%d/%d bytes)",
 			ipfmt(iphdr->ip_src), ipfmt(iphdr->ip_dst),
-			iphlen(iphdr), ntohs(iphdr->ip_len), ipfmt(dst));
+			iphlen(iphdr), ntohs(iphdr->ip_len));
 	/* ip fragment */
-	if (ntohs(iphdr->ip_len) > rt->rt_dev->net_mtu)
-		ip_send_frag(rt->rt_dev, pkb, dst);
+	if (ntohs(iphdr->ip_len) > pkb->pk_rtdst->rt_dev->net_mtu)
+		ip_send_frag(pkb->pk_rtdst->rt_dev, pkb);
 	else
-		ip_send_dev(rt->rt_dev, pkb, dst);
+		ip_send_dev(pkb->pk_rtdst->rt_dev, pkb);
 }
 
 static unsigned short ipid = 0;
@@ -191,9 +197,9 @@ void ip_forward(struct pkbuf *pkb)
 			icmp_send(ICMP_T_DESTUNREACH, ICMP_FRAG_NEEDED, 0, pkb);
 			goto drop_pkb;
 		}
-		ip_send_frag(rt->rt_dev, pkb, dst);
+		ip_send_frag(rt->rt_dev, pkb);
 	} else {
-		ip_send_dev(rt->rt_dev, pkb, dst);
+		ip_send_dev(rt->rt_dev, pkb);
 	}
 	return;
 drop_pkb:

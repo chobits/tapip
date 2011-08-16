@@ -16,7 +16,7 @@ net_stack:$(NET_STACK_OBJS)
 test/test_obj.o:test/shell.c test/test.c\
 		test/net_command.c test/ping_command.c
 	@(cd test/; make)
-net/net_obj.o:net/net.c net/netdev.c net/tap.c net/pkb.c net/veth.c
+net/net_obj.o:net/net.c net/netdev.c net/tap.c net/pkb.c net/veth.c net/loop.c
 	@(cd net/; make)
 arp/arp_obj.o:arp/arp.c arp/arp_cache.c
 	@(cd arp/; make)

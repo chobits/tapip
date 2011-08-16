@@ -19,7 +19,7 @@ struct netdev *netdev_alloc(char *devstr, struct netdev_ops *netops)
 	dev->net_name[NETDEV_NLEN - 1] = '\0';
 	strncpy(dev->net_name, devstr, NETDEV_NLEN - 1);
 	dev->net_ops = netops;
-	if (netops->init)
+	if (netops && netops->init)
 		netops->init(dev);
 	return dev;
 }
@@ -36,15 +36,17 @@ void netdev_interrupt(void)
 	veth_poll();
 }
 
-/* only create one virtual net device */
+/* create veth and lo */
 void netdev_init(void)
 {
+	loop_init();
 	veth_init();
 }
 
 void netdev_exit(void)
 {
 	veth_exit();
+	loop_exit();
 }
 
 #ifdef DEBUG_PKB
@@ -58,14 +60,15 @@ void netdev_tx(struct netdev *dev, struct pkbuf *pkb, int len,
 	struct ether *ehdr = (struct ether *)pkb->pk_data;
 
 	/* first copy to eth_dst, maybe eth_src will be copied to eth_dst */
+	ehdr->eth_pro = htons(proto);
 	hwacpy(ehdr->eth_dst, dst);
 	hwacpy(ehdr->eth_src, dev->net_hwaddr);
-	ehdr->eth_pro = htons(proto);
 
 	l2dbg(MACFMT " -> " MACFMT "(%s)",
 				macfmt(ehdr->eth_src),
 				macfmt(ehdr->eth_dst),
 				ethpro(proto));
+
 	pkb->pk_len = len + ETH_HRD_SZ;
 	/* real transmit packet */
 	dev->net_ops->xmit(dev, pkb);

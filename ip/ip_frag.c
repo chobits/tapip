@@ -215,13 +215,20 @@ struct pkbuf *ip_reass(struct pkbuf *pkb)
 	return pkb;
 }
 
-struct pkbuf *ip_frag(struct ip *orig, int hlen, int dlen, int off,
-						unsigned short mf_bit)
+struct pkbuf *ip_frag(struct pkbuf *pkb, struct ip *orig, int hlen,
+				int dlen, int off, unsigned short mf_bit)
 {
 	struct pkbuf *fragpkb;
 	struct ip *fraghdr;
+
 	fragpkb = alloc_pkb(ETH_HRD_SZ + hlen + dlen);
-	fragpkb->pk_pro = ETH_P_IP;
+	/* clone pkb information */
+	fragpkb->pk_pro = pkb->pk_pro;
+	fragpkb->pk_type = pkb->pk_type;
+	fragpkb->pk_indev = pkb->pk_indev;
+	fragpkb->pk_rtdst = pkb->pk_rtdst;
+
+	/* clone pkb (off) data */
 	fraghdr = pkb2ip(fragpkb);
 	/* copy head */
 	memcpy(fraghdr, orig, hlen);
@@ -235,7 +242,7 @@ struct pkbuf *ip_frag(struct ip *orig, int hlen, int dlen, int off,
 	return fragpkb;
 }
 
-void ip_send_frag(struct netdev *dev, struct pkbuf *pkb, unsigned int dst)
+void ip_send_frag(struct netdev *dev, struct pkbuf *pkb)
 {
 	struct pkbuf *fragpkb;
 	struct ip *fraghdr, *iphdr;
@@ -246,11 +253,11 @@ void ip_send_frag(struct netdev *dev, struct pkbuf *pkb, unsigned int dst)
 	dlen = ntohs(iphdr->ip_len) - hlen;
 	mlen = (dev->net_mtu - hlen) & ~7;	/* max length */
 	off = 0;
-
 	while (dlen > mlen) {
 		ipdbg(" [f] ip frag: off %d hlen %d dlen %d", off, hlen, mlen);
-		fragpkb = ip_frag(iphdr, hlen, mlen, off, IP_FRAG_MF);
-		ip_send_dev(dev, fragpkb, dst);
+		fragpkb = ip_frag(pkb, iphdr, hlen, mlen, off, IP_FRAG_MF);
+
+		ip_send_dev(dev, fragpkb);
 
 		dlen -= mlen;
 		off += mlen;
@@ -258,9 +265,9 @@ void ip_send_frag(struct netdev *dev, struct pkbuf *pkb, unsigned int dst)
 
 	if (dlen) {
 		ipdbg(" [f] ip frag: off %d hlen %d dlen %d", off, hlen, dlen);
-		fragpkb = ip_frag(iphdr, hlen, dlen, off,
+		fragpkb = ip_frag(pkb, iphdr, hlen, dlen, off,
 					iphdr->ip_fragoff & IP_FRAG_MF);
-		ip_send_dev(dev, fragpkb, dst);
+		ip_send_dev(dev, fragpkb);
 	}
 	free_pkb(pkb);
 }

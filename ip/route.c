@@ -57,8 +57,10 @@ void rt_add(unsigned int net, unsigned int netmask, unsigned int gw,
 
 void rt_init(void)
 {
+	/* loopback */
+	rt_add(LOCALNET(loop), loop->net_mask, 0, 0, RT_LOCALHOST, loop);
 	/* local host */
-	rt_add(veth->net_ipaddr, 0xffffffff, 0, 0, RT_LOCALHOST, veth);
+	rt_add(veth->net_ipaddr, 0xffffffff, 0, 0, RT_LOCALHOST, loop);
 	/* local net */
 	rt_add(LOCALNET(veth), veth->net_mask, 0, 0, RT_NONE, veth);
 	/* default route: next-hop is tap ipaddr */

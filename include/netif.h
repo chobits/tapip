@@ -48,6 +48,7 @@ struct pkbuf {
 	unsigned short pk_pro;		/* ethernet packet type ID */
 	unsigned short pk_type;		/* packet hardware address type */
 	int pk_len;
+	int pk_refcnt;
 	struct netdev *pk_indev;
 	struct rtentry *pk_rtdst;
 	unsigned char pk_data[0];
@@ -81,6 +82,7 @@ static inline unsigned int htonl(unsigned int host)
 
 extern struct tapdev *tap;
 extern struct netdev *veth;
+extern struct netdev *loop;
 
 extern struct netdev *netdev_alloc(char *dev, struct netdev_ops *);
 extern void netdev_free(struct netdev *nd);
@@ -112,5 +114,7 @@ extern void free_pkb(struct pkbuf *pkb);
 extern void netdev_tx(struct netdev *nd, struct pkbuf *pkb, int len,
 				unsigned short proto, unsigned char *dst);
 #endif
+extern int free_pkbs;
+extern int alloc_pkbs;
 
 #endif	/* netif.h */
