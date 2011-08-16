@@ -19,6 +19,7 @@ static void builtin_clear(int argc, char **argv);
 extern void arpcache(int, char **);
 extern void netdebug(int, char **);
 extern void ifconfig(int, char **);
+extern void pkb(int, char **);
 extern void route(int, char **);
 extern void ping(int, char **);
 
@@ -45,6 +46,7 @@ static struct command cmds[] = {
 	{ 1, arpcache, "arpcache", "see arp cache" },
 	{ 1, route, "route", "show / manipulate the IP routing table" },
 	{ 1, ifconfig, "ifconfig", "configure a network interface" },
+	{ 1, pkb, "pkb", "display pkb information" },
 	{ 0, NULL, NULL, NULL }	/* last one flag */
 };
 

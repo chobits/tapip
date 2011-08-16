@@ -63,32 +63,41 @@ void route(int argc, char **argv)
 	rt_traverse();
 }
 
-void ifconfig(int argc, char **argv)
+void ifinfo(struct netdev *dev)
 {
 	printf("%-10sHWaddr "MACFMT"\n"
 		"          IPaddr "IPFMT"\n"
 		"          mtu %d\n"
 		"          RX packet:%u bytes:%u errors:%u\n"
 		"          TX packet:%u bytes:%u errors:%u\n",
-		veth->net_name,
-		macfmt(veth->net_hwaddr),
-		ipfmt(veth->net_ipaddr),
-		veth->net_mtu,
-		veth->net_stats.rx_packets,
-		veth->net_stats.rx_bytes,
-		veth->net_stats.rx_errors,
-		veth->net_stats.tx_packets,
-		veth->net_stats.tx_bytes,
-		veth->net_stats.tx_errors);
+		dev->net_name,
+		macfmt(dev->net_hwaddr),
+		ipfmt(dev->net_ipaddr),
+		dev->net_mtu,
+		dev->net_stats.rx_packets,
+		dev->net_stats.rx_bytes,
+		dev->net_stats.rx_errors,
+		dev->net_stats.tx_packets,
+		dev->net_stats.tx_bytes,
+		dev->net_stats.tx_errors);
+}
+
+void ifconfig(int argc, char **argv)
+{
+	/* lo */
+	ifinfo(loop);
+	/* veth */
+	ifinfo(veth);
 #ifndef CONFIG_TOP1
-	printf("---[ Non local for ./net_stack ]------\n"
-		"%-10sHWaddr "MACFMT"\n"
-		"          IPaddr "IPFMT"\n"
-		"          mtu %d\n",
-		tap->dev.net_name,
-		macfmt(tap->dev.net_hwaddr),
-		ipfmt(tap->dev.net_ipaddr),
-		tap->dev.net_mtu);
+	/* tap0 */
+	ifinfo(&tap->dev);
 #endif
 }
 
+void pkb(int argc, char **argv)
+{
+	printf("[pkbuf memory information]\n"
+		" alloced pkbs: %d\n"
+		" free pkbs:    %d\n",
+		alloc_pkbs, free_pkbs);
+}

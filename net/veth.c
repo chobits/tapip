@@ -67,8 +67,8 @@ static int veth_dev_init(struct netdev *dev)
 	dev->net_ipaddr = FAKE_IPADDR;
 	dev->net_mask = FAKE_NETMASK;
 	hwacpy(dev->net_hwaddr, FAKE_HWADDR);
-	dbg("network ip address: " IPFMT, ipfmt(dev->net_ipaddr));
-	dbg("network hw address: " MACFMT, macfmt(dev->net_hwaddr));
+	dbg("%s ip address: " IPFMT, dev->net_name, ipfmt(dev->net_ipaddr));
+	dbg("%s hw address: " MACFMT, dev->net_name, macfmt(dev->net_hwaddr));
 	/* net stats have been zero */
 	return 0;
 }

@@ -5,6 +5,9 @@
 #include "ether.h"
 #include "lib.h"
 
+int free_pkbs = 0;
+int alloc_pkbs = 0;
+
 /* referred from linux-2.6: handing packet l2 padding */
 void pkb_trim(struct pkbuf *pkb, int len)
 {
@@ -20,9 +23,11 @@ struct pkbuf *alloc_pkb(int size)
 	pkb->pk_len = size;
 	pkb->pk_pro = 0xffff;
 	pkb->pk_type = 0;
+	pkb->pk_refcnt = 1;
 	pkb->pk_indev = NULL;
 	pkb->pk_rtdst = NULL;
 	list_init(&pkb->pk_list);
+	alloc_pkbs++;
 	return pkb;
 }
 
@@ -34,12 +39,20 @@ struct pkbuf *alloc_netdev_pkb(struct netdev *nd)
 #ifdef DEBUG_PKB
 void _free_pkb(struct pkbuf *pkb)
 {
-	dbg("%p", pkb);
+	dbg("%p %d", pkb, pkb->pk_refcnt);
 #else
 void free_pkb(struct pkbuf *pkb)
 {
 #endif
-	free(pkb);
+	if (--pkb->pk_refcnt <= 0) {
+		free_pkbs++;
+		free(pkb);
+	}
+}
+
+void get_pkb(struct pkbuf *pkb)
+{
+	pkb->pk_refcnt++;
 }
 
 void pkbdbg(struct pkbuf *pkb)
