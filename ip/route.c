@@ -63,8 +63,10 @@ void rt_init(void)
 	rt_add(veth->net_ipaddr, 0xffffffff, 0, 0, RT_LOCALHOST, loop);
 	/* local net */
 	rt_add(LOCALNET(veth), veth->net_mask, 0, 0, RT_NONE, veth);
+#ifndef CONFIG_TOP1
 	/* default route: next-hop is tap ipaddr */
-	rt_add(0, 0, veth->net_ipaddr, 0, RT_DEFAULT, veth);
+	rt_add(0, 0, tap->dev.net_ipaddr, 0, RT_DEFAULT, veth);
+#endif
 	dbg("route table init");
 }
 
