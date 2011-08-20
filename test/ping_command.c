@@ -109,7 +109,7 @@ void send_packet(void)
 	icmphdr->icmp_id = htons(id);
 	icmphdr->icmp_seq = htons(++seq);
 	icmphdr->icmp_cksum = 0;
-	icmphdr->icmp_cksum = icmp_chksum((unsigned char *)icmphdr,
+	icmphdr->icmp_cksum = icmp_chksum((unsigned short *)icmphdr,
 			ICMP_HRD_SZ + size);
 	printf(IPFMT" send to "IPFMT" id %d seq %d ttl %d\n",
 			ipfmt(veth->net_ipaddr),

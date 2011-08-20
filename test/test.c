@@ -56,9 +56,6 @@ void net_stack_exit(void)
 
 int main(int argc, char **argv)
 {
-	struct pkbuf *pkb;
-	int len;
-
 	net_stack_init();
 	net_stack_run();
 	net_stack_exit();

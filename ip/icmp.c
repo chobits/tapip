@@ -36,7 +36,7 @@ static struct icmp_desc icmp_table[ICMP_T_MAXNUM + 1] = {
 	[ICMP_T_REDIRECT] = {
 		.error = 1,
 		.info = "icmp redirect",
-		.handler = icmp_drop_reply,
+		.handler = icmp_redirect,
 	},
 	[ICMP_T_DUMMY_6] = ICMP_DESC_DUMMY_ENTRY,
 	[ICMP_T_DUMMY_7] = ICMP_DESC_DUMMY_ENTRY,
@@ -88,11 +88,6 @@ static struct icmp_desc icmp_table[ICMP_T_MAXNUM + 1] = {
 	}
 };
 
-unsigned short icmp_chksum(unsigned short *data, int size)
-{
-	return ip_chksum(data, size);
-}
-
 static void icmp_dest_unreach(struct icmp_desc *icmp_desc, struct pkbuf *pkb)
 {
 	/* FIXME: report error to upper application layer */
@@ -116,7 +111,9 @@ static void icmp_redirect(struct icmp_desc *icmp_desc, struct pkbuf *pkb)
 		icmpdbg("Redirect code %d is error", icmphdr->icmp_code);
 	else
 		icmpdbg("from " IPFMT " %s(new nexthop "IPFMT")",
-			iphdr->ip_src, redirectstr[icmphdr->icmp_code]);
+					ipfmt(iphdr->ip_src),
+					redirectstr[icmphdr->icmp_code],
+					ipfmt(icmphdr->icmp_gw));
 	free_pkb(pkb);
 }
 
@@ -176,7 +173,7 @@ void icmp_in(struct pkbuf *pkb)
 	struct icmp *icmphdr = ip2icmp(iphdr);
 	int icmplen, type;
 	/* sanity check */
-	icmplen = iphdr->ip_len - iphlen(iphdr);
+	icmplen = ipdlen(iphdr);
 	icmpdbg("%d bytes", icmplen);
 	if (icmplen < ICMP_HRD_SZ) {
 		icmpdbg("icmp header is too small");

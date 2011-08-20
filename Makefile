@@ -1,12 +1,12 @@
 MAKEFLAGS += --no-print-directory
 
 CC = gcc
-CFLAGS = -lpthread
+CFLAGS = -lpthread -Wall
 
 NET_STACK_OBJS =	test/test_obj.o	\
 			net/net_obj.o	\
-			ip/ip_obj.o	\
 			arp/arp_obj.o	\
+			ip/ip_obj.o	\
 			lib/lib_obj.o
 
 all:net_stack
@@ -22,7 +22,7 @@ arp/arp_obj.o:arp/arp.c arp/arp_cache.c
 	@(cd arp/; make)
 ip/ip_obj.o:ip/ip.c ip/route.c ip/ip_frag.c ip/icmp.c
 	@(cd ip/; make)
-lib/lib_obj.o:lib/lib.c
+lib/lib_obj.o:lib/lib.c lib/checksum.c
 	@(cd lib/; make)
 
 tag:

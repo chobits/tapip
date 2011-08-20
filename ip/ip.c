@@ -8,19 +8,6 @@
 #include "lib.h"
 #include "netcfg.h"
 
-unsigned short ip_chksum(unsigned short *data, int size)
-{
-	unsigned int sum = 0;
-
-	while (size > 0) {
-		sum += *data++;
-		size -= 2;
-	}
-
-	sum = (sum & 0xffff) + (sum >> 16);
-	sum = (sum & 0xffff) + (sum >> 16);
-	return ~sum & 0xffff;
-}
 
 void ip_setchksum(struct ip *iphdr)
 {

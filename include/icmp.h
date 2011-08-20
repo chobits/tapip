@@ -10,6 +10,7 @@ struct icmp {
 			unsigned short id;	/* identifier */
 			unsigned short seq;	/* sequence number */
 		} echo;
+		unsigned int gw;		/* icmp redirect gateway */
 		unsigned int pad;
 	} icmp_un;
 	unsigned char icmp_data[0];
@@ -18,6 +19,7 @@ struct icmp {
 #define icmp_id icmp_un.echo.id
 #define icmp_seq icmp_un.echo.id
 #define icmp_undata icmp_un.pad
+#define icmp_gw icmp_un.gw
 
 #define ICMP_HRD_SZ sizeof(struct icmp)
 #define ip2icmp(ip) ((struct icmp *)ipdata(ip))

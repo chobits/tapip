@@ -43,6 +43,7 @@ struct ip {
 
 #define ipver(ip) ((ip)->ip_ver)
 #define iphlen(ip) ((ip)->ip_hlen << 2)
+#define ipdlen(ip) ((ip)->ip_len - iphlen(iphdr))
 #define ipdata(ip) ((unsigned char *)(ip) + iphlen(ip))
 #define ipoff(ip) ((((ip)->ip_fragoff) & IP_FRAG_OFF) * 8)
 #define pkb2ip(pkb) ((struct ip *)((pkb)->pk_data + ETH_HRD_SZ))
@@ -93,4 +94,10 @@ static inline int equsubnet(unsigned int mask, unsigned int ip1, unsigned int ip
 }
 
 extern struct pkbuf *ip_reass(struct pkbuf *);
+extern void ip_send_dev(struct netdev *dev, struct pkbuf *pkb);
+extern void ip_send_out(struct pkbuf *pkb);
+extern void ip_send_info(struct pkbuf *pkb, unsigned char tos, unsigned short len,
+		unsigned char ttl, unsigned char pro, unsigned int dst);
+extern void ip_send_frag(struct netdev *dev, struct pkbuf *pkb);
+
 #endif	/* ip */

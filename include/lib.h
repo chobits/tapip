@@ -21,7 +21,7 @@
 #define blue(str) navyblue(str)
 
 #define ferr(fmt, args...) fprintf(stderr, fmt, ##args)
-#define dbg(fmt, args...) ferr("[%d]%s " fmt "\n", gettid(), __FUNCTION__, ##args)
+#define dbg(fmt, args...) ferr("[%d]%s " fmt "\n", (int)gettid(), __FUNCTION__, ##args)
 
 #define devdbg(fmt, args...)\
 do {\
@@ -76,6 +76,12 @@ do {\
 
 extern unsigned int net_debug;
 extern void *xmalloc(int);
+extern void perrx(char *str);
 extern int str2ip(char *str, unsigned int *ip);
+extern void printfs(int mlen, const char *fmt, ...);
 
+extern unsigned short ip_chksum(unsigned short *data, int size);
+extern unsigned short icmp_chksum(unsigned short *data, int size);
+extern unsigned short tcp_chksum(unsigned int src, unsigned dst,
+			unsigned short len, unsigned short *data);
 #endif	/* lib.h */
