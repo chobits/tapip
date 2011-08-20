@@ -45,7 +45,6 @@ struct fragment *new_frag(struct ip *iphdr)
 void delete_frag(struct fragment *frag)
 {
 	struct pkbuf *pkb;
-	struct fragment *frag1;
 
 	list_del(&frag->frag_list);
 	while (!list_empty(&frag->frag_pkb)) {
@@ -245,8 +244,8 @@ struct pkbuf *ip_frag(struct pkbuf *pkb, struct ip *orig, int hlen,
 void ip_send_frag(struct netdev *dev, struct pkbuf *pkb)
 {
 	struct pkbuf *fragpkb;
-	struct ip *fraghdr, *iphdr;
-	int dlen, hlen, mlen, fraglen, off;
+	struct ip *iphdr;
+	int dlen, hlen, mlen, off;
 
 	iphdr = pkb2ip(pkb);
 	hlen = iphlen(iphdr);

@@ -6,6 +6,13 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/syscall.h>
+#include <fcntl.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <poll.h>
+#include <errno.h>
+#include <signal.h>
+#include <pthread.h>
 
 #define gettid() syscall(SYS_gettid)
 

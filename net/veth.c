@@ -2,21 +2,13 @@
  *  Lowest net device code:
  *    virtual net device driver based on tap device
  */
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <errno.h>
-#include <poll.h>
-
 #include "netif.h"
 #include "ether.h"
 #include "ip.h"
 #include "lib.h"
 #include "list.h"
 #include "netcfg.h"
+#include "tap.h"
 
 struct tapdev *tap;
 struct netdev *veth;

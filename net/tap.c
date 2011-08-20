@@ -14,8 +14,7 @@
 #include "ether.h"
 #include "lib.h"
 #include "ip.h"
-
-#define TUNTAPDEV "/dev/net/tun"
+#include "tap.h"
 
 static int skfd, skfd6;
 
@@ -29,12 +28,12 @@ int setpersist_tap(int fd)
 	return 0;
 }
 
-void setnetmask_tap(char *name, unsigned int netmask)
+void setnetmask_tap(unsigned char *name, unsigned int netmask)
 {
 	struct ifreq ifr = {};
 	struct sockaddr_in *saddr;
 
-	strcpy(ifr.ifr_name, name);
+	strcpy(ifr.ifr_name, (char *)name);
 	saddr = (struct sockaddr_in *)&ifr.ifr_netmask;
 	saddr->sin_family = AF_INET;
 	saddr->sin_addr.s_addr = netmask;
@@ -45,11 +44,11 @@ void setnetmask_tap(char *name, unsigned int netmask)
 	dbg("set Netmask: "IPFMT, ipfmt(netmask));
 }
 
-void setflags_tap(char *name, unsigned short flags, int set)
+void setflags_tap(unsigned char *name, unsigned short flags, int set)
 {
 	struct ifreq ifr = {};
 
-	strcpy(ifr.ifr_name, name);
+	strcpy(ifr.ifr_name, (char *)name);
 	/* get original flags */
 	if (ioctl(skfd, SIOCGIFFLAGS, (void *)&ifr) < 0) {
 		close(skfd);
@@ -66,23 +65,23 @@ void setflags_tap(char *name, unsigned short flags, int set)
 	}
 }
 
-void setdown_tap(char *name)
+void setdown_tap(unsigned char *name)
 {
 	setflags_tap(name, IFF_UP | IFF_RUNNING, 0);
 	dbg("ifdown %s", name);
 }
 
-void setup_tap(char *name)
+void setup_tap(unsigned char *name)
 {
 	setflags_tap(name, IFF_UP | IFF_RUNNING, 1);
 	dbg("ifup %s", name);
 }
 
-void getmtu_tap(char *name, int *mtu)
+void getmtu_tap(unsigned char *name, int *mtu)
 {
 	struct ifreq ifr = {};
 
-	strcpy(ifr.ifr_name, name);
+	strcpy(ifr.ifr_name, (char *)name);
 	/* get net order hardware address */
 	if (ioctl(skfd6, SIOCGIFMTU, (void *)&ifr) < 0) {
 		close(skfd6);
@@ -92,12 +91,12 @@ void getmtu_tap(char *name, int *mtu)
 	dbg("mtu: %d", ifr.ifr_mtu);
 }
 
-void setipaddr_tap(char *name, unsigned int ipaddr)
+void setipaddr_tap(unsigned char *name, unsigned int ipaddr)
 {
 	struct ifreq ifr = {};
 	struct sockaddr_in *saddr;
 
-	strcpy(ifr.ifr_name, name);
+	strcpy(ifr.ifr_name, (char *)name);
 	saddr = (struct sockaddr_in *)&ifr.ifr_addr;
 	saddr->sin_family = AF_INET;
 	saddr->sin_addr.s_addr = ipaddr;
@@ -108,12 +107,12 @@ void setipaddr_tap(char *name, unsigned int ipaddr)
 	dbg("set IPaddr: "IPFMT, ipfmt(ipaddr));
 }
 
-void getipaddr_tap(char *name, unsigned int *ipaddr)
+void getipaddr_tap(unsigned char *name, unsigned int *ipaddr)
 {
 	struct ifreq ifr = {};
 	struct sockaddr_in *saddr;
 
-	strcpy(ifr.ifr_name, name);
+	strcpy(ifr.ifr_name, (char *)name);
 	if (ioctl(skfd, SIOCGIFADDR, (void *)&ifr) < 0) {
 		close(skfd);
 		perrx("socket SIOCGIFADDR");
@@ -123,12 +122,12 @@ void getipaddr_tap(char *name, unsigned int *ipaddr)
 	dbg("get IPaddr: "IPFMT, ipfmt(*ipaddr));
 }
 
-void getname_tap(int tapfd, char *name)
+void getname_tap(int tapfd, unsigned char *name)
 {
 	struct ifreq ifr = {};
 	if (ioctl(tapfd, TUNGETIFF, (void *)&ifr) < 0)
 		perrx("ioctl SIOCGIFHWADDR");
-	strcpy(name, ifr.ifr_name);
+	strcpy((char *)name, ifr.ifr_name);
 	dbg("net device: %s", name);
 }
 

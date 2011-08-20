@@ -2,13 +2,17 @@
  *  Lowest net device code:
  *    independent net device layer
  */
-#include <string.h>
-
 #include "netif.h"
 #include "ether.h"
 #include "lib.h"
 #include "list.h"
 #include "netcfg.h"
+
+extern void loop_init(void);
+extern void veth_init(void);
+extern void loop_exit(void);
+extern void veth_exit(void);
+extern void veth_poll(void);
 
 /* Altough dev is already created, this function is safe! */
 struct netdev *netdev_alloc(char *devstr, struct netdev_ops *netops)
@@ -17,7 +21,7 @@ struct netdev *netdev_alloc(char *devstr, struct netdev_ops *netops)
 	dev = xmalloc(sizeof(*dev));
 	memset(dev, 0x0, sizeof(*dev));
 	dev->net_name[NETDEV_NLEN - 1] = '\0';
-	strncpy(dev->net_name, devstr, NETDEV_NLEN - 1);
+	strncpy((char *)dev->net_name, devstr, NETDEV_NLEN - 1);
 	dev->net_ops = netops;
 	if (netops && netops->init)
 		netops->init(dev);

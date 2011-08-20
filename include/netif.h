@@ -4,6 +4,7 @@
 #define NETDEV_ALEN	6
 #define NETDEV_NLEN	16	/* IFNAMSIZ */
 
+#include "compile.h"
 #include "list.h"
 struct pkbuf;
 struct netdev;
@@ -27,7 +28,7 @@ struct netdev_ops {
 struct netdev {
 	/* tap device information */
 	int net_mtu;
-	unsigned int  net_ipaddr;		/* dev binding ip address */
+	unsigned int net_ipaddr;		/* dev binding ip address */
 	unsigned int net_mask;			/* netmask */
 	unsigned char net_hwaddr[NETDEV_ALEN];	/* hardware address */
 	unsigned char net_name[NETDEV_NLEN];	/* device name */
@@ -63,13 +64,13 @@ struct pkbuf {
 #define HOST_LITTLE_ENDIAN	/* default: little endian machine */
 #ifdef HOST_LITTLE_ENDIAN
 
-static inline unsigned short htons(unsigned short host)
+static _inline unsigned short htons(unsigned short host)
 {
 	return (host >> 8) | (host << 8);
 }
 #define ntohs(net) htons(net)
 
-static inline unsigned int htonl(unsigned int host)
+static _inline unsigned int htonl(unsigned int host)
 {
 	return ((host & 0x000000ff) << 24) |
 		((host & 0x0000ff00) << 8) |
@@ -84,15 +85,19 @@ extern struct tapdev *tap;
 extern struct netdev *veth;
 extern struct netdev *loop;
 
+extern void netdev_init(void);
 extern struct netdev *netdev_alloc(char *dev, struct netdev_ops *);
 extern void netdev_free(struct netdev *nd);
 extern void netdev_interrupt(void);
+extern void netdev_exit(void);
 
+extern void net_in(struct netdev *dev, struct pkbuf *pkb);
 extern void net_timer(void);
 
 extern struct pkbuf *alloc_pkb(int size);
 extern struct pkbuf *alloc_netdev_pkb(struct netdev *nd);
 extern void pkbdbg(struct pkbuf *pkb);
+extern void pkb_trim(struct pkbuf *pkb, int len);
 //#define DEBUG_PKB
 #ifdef DEBUG_PKB
 extern void _free_pkb(struct pkbuf *pkb);
@@ -116,5 +121,6 @@ extern void netdev_tx(struct netdev *nd, struct pkbuf *pkb, int len,
 #endif
 extern int free_pkbs;
 extern int alloc_pkbs;
+extern void get_pkb(struct pkbuf *pkb);
 
 #endif	/* netif.h */

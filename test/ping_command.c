@@ -18,7 +18,7 @@ static int finite;
 static int ttl;
 static unsigned ipaddr;
 
-static int usage(void)
+static void usage(void)
 {
 	printf(
 		"Usage: ping [OPTIONS] ipaddr\n"
@@ -121,6 +121,7 @@ void send_packet(void)
 			ttl, IP_P_ICMP, ipaddr);
 }
 
+extern void signal_wait(int);
 void sigalrm(int num)
 {
 	if (!finite || count > 0) {

@@ -1,6 +1,6 @@
 CC = gcc
 LD = ld
-CFLAGS = -I../include
+CFLAGS = -I../include -Wall
 
 OBJS	=	net.o		\
 		netdev.o	\

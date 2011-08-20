@@ -87,7 +87,7 @@ struct fragment {
 
 #define MULTICAST(netip) ((0x000000f0 & (netip)) == 0x000000e0)
 #define BROADCAST(netip) (((0xff000000 & (netip)) == 0xff000000) ||\
-				(0xff000000 & (netip) == 0x00000000))
+				((0xff000000 & (netip)) == 0x00000000))
 static inline int equsubnet(unsigned int mask, unsigned int ip1, unsigned int ip2)
 {
 	return ((mask & ip1) == (mask & ip2));
@@ -99,5 +99,8 @@ extern void ip_send_out(struct pkbuf *pkb);
 extern void ip_send_info(struct pkbuf *pkb, unsigned char tos, unsigned short len,
 		unsigned char ttl, unsigned char pro, unsigned int dst);
 extern void ip_send_frag(struct netdev *dev, struct pkbuf *pkb);
+extern void ip_setchksum(struct ip *iphdr);
+extern void ip_in(struct netdev *dev, struct pkbuf *pkb);
+extern void ip_timer(int delta);
 
 #endif	/* ip */

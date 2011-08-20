@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #include "ether.h"
 #include "arp.h"
 #include "lib.h"
@@ -36,8 +34,6 @@ static _inline void arp_cache_unlock(void)
 #endif	/* end DEBUG_LOCK */
 
 #else	/* !DEBUG_SEM */
-
-#include <pthread.h>
 
 /* It is evil to init pthread mutex dynamically X< */
 #ifdef STATIC_MUTEX

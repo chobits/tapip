@@ -1,6 +1,6 @@
 CC = gcc
 LD = ld
-CFLAGS = -I../include
+CFLAGS = -I../include -Wall
 
 OBJS	=	test.o		\
 		net_command.o	\

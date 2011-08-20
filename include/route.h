@@ -21,6 +21,7 @@ extern struct rtentry *rt_lookup(unsigned int);
 extern void rt_add(unsigned int, unsigned int, unsigned int,
 			int, unsigned int, struct netdev *);
 extern void rt_init(void);
+extern int rt_output(struct pkbuf *);
 extern int rt_input(struct pkbuf *);
 extern void rt_traverse(void);
 

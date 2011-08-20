@@ -3,7 +3,7 @@
 #include "arp.h"
 #include "lib.h"
 
-#define BRD_HWADDR "\xff\xff\xff\xff\xff\xff"
+#define BRD_HWADDR ((unsigned char *)"\xff\xff\xff\xff\xff\xff")
 
 void arp_request(struct arpentry *ae)
 {
@@ -69,11 +69,12 @@ void arp_recv(struct netdev *dev, struct pkbuf *pkb)
 		goto free_pkb;
 	}
 
-	if (ae = arp_lookup(ahdr->arp_pro, ahdr->arp_sip)) {
+	ae = arp_lookup(ahdr->arp_pro, ahdr->arp_sip);
+	if (ae) {
 		/* passive learning(REQUST): update old arp entry in cache */
 		hwacpy(ae->ae_hwaddr, ahdr->arp_sha);
 		/* send waiting packet (maybe we receive arp reply) */
-		if (ae->ae_state = ARP_WAITING)
+		if (ae->ae_state == ARP_WAITING)
 			arp_queue_send(ae);
 		ae->ae_state = ARP_RESOLVED;
 		ae->ae_ttl = ARP_TIMEOUT;
@@ -98,7 +99,6 @@ void arp_in(struct netdev *dev, struct pkbuf *pkb)
 {
 	struct ether *ehdr = (struct ether *)pkb->pk_data;
 	struct arp *ahdr = (struct arp *)ehdr->eth_data;
-	struct arpentry *ae;
 
 	if (pkb->pk_type == PKT_OTHERHOST) {
 		arpdbg("arp(l2) packet is not for us");

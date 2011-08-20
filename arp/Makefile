@@ -1,6 +1,6 @@
 CC = gcc
 LD = ld
-CFLAGS = -I../include
+CFLAGS = -I../include -Wall
 
 OBJS	=	arp.o		\
 		arp_cache.o

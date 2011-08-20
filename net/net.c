@@ -1,13 +1,6 @@
 /*
  * special net device independent L2 code
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <poll.h>
-
 #include <net/if.h>
 #include <linux/in.h>
 #include <linux/socket.h>
@@ -16,6 +9,7 @@
 #include "netif.h"
 #include "ether.h"
 #include "ip.h"
+#include "arp.h"
 #include "lib.h"
 #include "netcfg.h"
 

@@ -17,17 +17,17 @@ struct ether {
 	unsigned char eth_data[0];		/* data field */
 } __attribute__((packed));
 
-static inline void hwacpy(unsigned char *dst, unsigned char *src)
+static inline void hwacpy(void *dst, void *src)
 {
 	memcpy(dst, src, ETH_ALEN);
 }
 
-static inline void hwaset(unsigned char *dst, int val)
+static inline void hwaset(void *dst, int val)
 {
 	memset(dst, val, ETH_ALEN);
 }
 
-static inline int hwacmp(unsigned char *hwa1, unsigned char *hwa2)
+static inline int hwacmp(void *hwa1, void *hwa2)
 {
 	return memcmp(hwa1, hwa2, ETH_ALEN);
 }

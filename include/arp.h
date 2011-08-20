@@ -70,12 +70,18 @@ static inline void arp_hton(struct arp *ahdr)
 
 extern void arp_cache_traverse(void);
 extern void arp_cache_init(void);
+extern void arp_timer(int delta);
 extern void arp_proc(int);
 
 extern struct arpentry *arp_alloc(void);
 extern struct arpentry *arp_lookup(unsigned short, unsigned int);
 extern struct arpentry *arp_lookup_resolv(unsigned short, unsigned int);
 extern int arp_insert(struct netdev *, unsigned short, unsigned int, unsigned char *);
+
+extern void arp_queue_drop(struct arpentry *);
+extern void arp_queue_send(struct arpentry *);
+extern void arp_request(struct arpentry *);
+extern void arp_in(struct netdev *dev, struct pkbuf *pkb);
 
 #endif	/* arp.h */
 

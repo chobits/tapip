@@ -90,5 +90,7 @@ struct icmp_desc {
 
 #define icmp_type_error(type) icmp_table[type].error
 #define icmp_error(icmphdr) icmp_type_error((icmphdr)->icmp_type)
-
+extern void icmp_send(unsigned char type, unsigned char code,
+		unsigned int data, struct pkbuf *pkb_in);
+extern void icmp_in(struct pkbuf *pkb);
 #endif	/* icmp.h */
