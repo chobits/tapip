@@ -17,7 +17,7 @@ struct icmp {
 } __attribute__((packed));
 
 #define icmp_id icmp_un.echo.id
-#define icmp_seq icmp_un.echo.id
+#define icmp_seq icmp_un.echo.seq
 #define icmp_undata icmp_un.pad
 #define icmp_gw icmp_un.gw
 
