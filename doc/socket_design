@@ -1,0 +1,59 @@
+Linux socket model
+====================================================
+socket
+   `------> +---------+-+-+
+            |  sock   | | |
+            +---------+ | |
+            | inet_sock | |   --> PF_INET      [family]
+            +-----------+ |
+            | tcp_sock    |   --> SOCK_STREAM  [type]
+            +-------------+       IPPROTO_TCP  [protocol]
+
+ tcp_sock is Transmission Control Block(TCB) of RFC 793
+
+----------------------------------------------------
+inet_protosw (inetsw_array[])
++---------+
+| type    | (SOCK_[type])                      [type]
++---------+
+|protocol | (IPPROTO_[protocol])               [protocol]
++---------+
+| ops     | (inet_[type]_ops)                  [type]
++---------+
+| prot   ----->  proto         (tcp_prot)      [protocol]
++---------+     +-------------+
+                | operations  |
+                |  .accept    |
+                |  .close     |
+                |  .......    |
+                +-------------+
+
+Fucntion calling path:
+ sys_connect
+  .. -> inet_[type]_ops->connect()
+   .. -> sock->sk_prot->connect()
+ (sock->sk_prot == inet_protosw->prot)
+
+
+My socket model
+====================================================
+
+socket                      
+   `------> +---------+-+
+            |  sock   | |   --> PF_INET      [family]
+            +---------+ |
+            | tcp_sock  |   --> SOCK_STREAM  [type]
+            | +-------+ |
+            | |tcb    | |       IPPROTO_TCP  [protocol]
+            | +-------+ |
+            +-----------+
+             
+ tcp_sock::tcb is Transmission Control Block(TCB) of RFC 793
+----------------------------------------------------
+socket->ops (inet_ops) 
+sock->ops   (tcp_ops)
+
+Fucntion calling path:
+  _send()
+    -> inet_send()
+      -> tcp_send()
