@@ -1,0 +1,67 @@
+Frequently Asked Questions for TCP or Socket
+==============================
+
+1. Can one port be bound to two different sockets?
+  NO(see Berkeley sockets wiki)
+
+2. How dose _accept() block current caller?
+  If caller is implemented via pthread(7),
+  it is possible to block caller via pthread condition.
+  (see pthread_cond_xxxx(3p) man page)
+
+3. How does _close() release socket during _recv()?
+  Let us first see how linux handles this:
+
+  Usermode test example:
+    sigint() { close(sockfd); }
+    main() {
+       signal(SIGINT, sigint);     /* sa_flags --> SA_RESTART */
+       sockfd = socket(SOCK_RAW);
+       err = recv(sockfd);
+       if (err < 0)
+           perror("recv");
+    }
+
+  Compile the code into ./a.out:
+    # ./a.out
+    [we enter ^C]
+    ^Crecv: Bad file descriptor
+
+  Linux kernel code:
+    sys_recv -> sys_recvfrom -> sock_recvmsg
+    -> __sock_recvmsg -> sock_common_recvmsg
+    -> raw_recvmsg -> skb_recv_datagram:
+    do {
+       /* get skb */
+    } (!wait_for_packet(err))
+
+    wait_for_packet
+    {
+     if (signal_pending()) {          -------(*)
+        *err = -ERESTARTSYS;
+        return *err;
+     }
+     schedule_timeout();              -------(**)
+     return 0;
+    }
+
+    When I enter ^C, we send a SIGINT signal to my usermode process
+    and wake it up. Then it will wake from (**) and return 0 to recall
+    wait_for_packet() second time.
+    This time it will return  -ERESTARTSYS from (*) for pending signal.
+    Then it will return from recv(), but handing signal(call sigint())
+    firstly, and recall recv() because of -ERESTARTSYS.
+    Because sigint() close the socket, the restarted recv() will report
+    a error.
+  
+   Let us see a brief runtime stream:
+    ./a.out
+      => recv =...=> schedule_timeout() [pending]
+      ^C  --> signal sending --> wake up [pending]
+      [pending] => recv return =>
+      system_call => syscall_exit => syscall_exit_work => work_pending =>
+      work_notifysig => do_notify_resume => do_signal => sigint() =>
+      recv restart => return error
+
+  I use pthread condition to simulate blocking model of wait_for_packet().
+  and simulate signal handling!
