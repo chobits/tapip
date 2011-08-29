@@ -1,11 +1,12 @@
-#include <stdio.h>
-#include <signal.h>
-
+/*
+ * ping2 - internal stack version
+ *         It is obsolete.
+ */
+#include "lib.h"
 #include "netif.h"
 #include "ip.h"
 #include "icmp.h"
 #include "arp.h"
-#include "lib.h"
 #include "route.h"
 
 extern unsigned int net_debug;
@@ -69,6 +70,7 @@ static int parse_args(int argc, char **argv)
 			return -1;
 		}
 	}
+
 	if (size < 0 || size > 65507) {
 		printf("Packet size %d is too large. Maximum is 65507\n", size);
 		return -2;
@@ -92,7 +94,7 @@ static int parse_args(int argc, char **argv)
 	return 0;
 }
 
-void send_packet(void)
+static void send_packet(void)
 {
 	struct pkbuf *pkb;
 	struct icmp *icmphdr;
@@ -133,7 +135,7 @@ void sigalrm(int num)
 }
 
 /* raw ping: we should use raw ip instead of it sometime */
-void ping(int argc, char **argv)
+void ping2(int argc, char **argv)
 {
 	int err;
 

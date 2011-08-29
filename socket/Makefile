@@ -2,25 +2,19 @@ CC = gcc
 LD = ld
 CFLAGS = -I../include -Wall
 
-OBJS	=	ip.o		\
-		ip_frag.o	\
-		icmp.o		\
-		raw.o		\
-		route.o
+OBJS	= socket.o sock.o raw_sock.o inet.o
 
-all:ip_obj.o
-ip_obj.o:$(OBJS)
+all:socket_obj.o
+socket_obj.o:$(OBJS)
 	$(LD) -r -o $@ $^
 
-ip.o:ip.c
+socket.o:socket.c
 	$(CC) $(CFLAGS) -c $< -o $@
-ip_frag.o:ip_frag.c
+sock.o:sock.c
 	$(CC) $(CFLAGS) -c $< -o $@
-icmp.o:icmp.c
+raw_sock.o:raw_sock.c
 	$(CC) $(CFLAGS) -c $< -o $@
-route.o:route.c
-	$(CC) $(CFLAGS) -c $< -o $@
-raw.o:raw.c
+inet_sock.o:inet_sock.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

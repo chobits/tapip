@@ -1,9 +1,5 @@
-#include <stdio.h>
-#include <stdarg.h>
-#include <stdlib.h>
-#include <errno.h>
-
 #include "lib.h"
+#include "ip.h"
 
 void perrx(char *str)
 {
@@ -39,7 +35,7 @@ void printfs(int mlen, const char *fmt, ...)
 
 int str2ip(char *str, unsigned int *ip)
 {
-	int a, b, c, d;
+	unsigned int a, b, c, d;
 	if (sscanf(str, "%d.%d.%d.%d", &a, &b, &c, &d) != 4)
 		return -1;
 	if ((a < 0 || a > 255) ||
@@ -50,3 +46,18 @@ int str2ip(char *str, unsigned int *ip)
 	*ip = a | (b << 8) | (c << 16) | (d << 24);
 	return 0;
 }
+
+int parse_ip_port(char *str, unsigned int *addr, unsigned short *nport)
+{
+	char *port;
+	if ((port = strchr(str, ':')) != NULL) {
+		*nport = htons(atoi(&port[1]));
+		*port = '\0';
+	}
+	if (str2ip(str, addr) < 0)
+		return -1;
+	if (port)
+		*port = ':';
+	return 0;
+}
+

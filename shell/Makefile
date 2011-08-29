@@ -2,15 +2,15 @@ CC = gcc
 LD = ld
 CFLAGS = -I../include -Wall
 
-OBJS	=	test.o		\
+OBJS	=	main.o		\
 		net_command.o	\
 		ping_command.o	\
 		shell.o
 
-all:test_obj.o
-test_obj.o:$(OBJS)
+all:shell_obj.o
+shell_obj.o:$(OBJS)
 	$(LD) -r -o $@ $^
-test.o:test.c
+main.o:main.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 net_command.o:net_command.c
 	$(CC) $(CFLAGS) -c -o $@ $<

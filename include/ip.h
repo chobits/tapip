@@ -16,16 +16,19 @@
 #define IP_FRAG_OFF	0x1fff
 #define IP_FRAG_MASK	(IP_FRAG_OFF | IP_FRAG_MF)
 
+#define IP_P_IP		0
 #define IP_P_ICMP	1
 #define IP_P_IGMP	2
 #define IP_P_TCP	6
 #define IP_P_EGP	8
 #define IP_P_UDP	17
 #define IP_P_OSPF	89
+#define IP_P_RAW	255
+#define IP_P_MAX	256
 
 /* default: host order is little-endian */
 struct ip {
-	unsigned char	ip_hlen:4,	/* header length */
+	unsigned char	ip_hlen:4,	/* header length(in 4-octet's) */
 			ip_ver:4;	/* version */
 	unsigned char ip_tos;		/* type of service */
 	unsigned short ip_len;		/* total ip packet data length */

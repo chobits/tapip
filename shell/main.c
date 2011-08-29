@@ -1,16 +1,19 @@
-
 #include "lib.h"
 #include "netif.h"
 #include "ether.h"
 #include "ip.h"
 #include "arp.h"
 #include "route.h"
+#include "socket.h"
 
 extern void test_shell(char *);
 
-static pthread_t threads[2];
-
-typedef void *(*pfunc_t)(void *);
+/*
+ * 0 timer
+ * 1 core stack
+ * 2 raw ip output process
+ */
+pthread_t threads[3];
 
 int newthread(pfunc_t thread_func)
 {
@@ -25,6 +28,7 @@ void net_stack_init(void)
 	netdev_init();
 	arp_cache_init();
 	rt_init();
+	socket_init();
 }
 
 void net_stack_run(void)
@@ -45,6 +49,8 @@ void net_stack_exit(void)
 		perror("kill child 0");
 	if (pthread_cancel(threads[1]))
 		perror("kill child 1");
+	if (pthread_cancel(threads[2]))
+		perror("kill child 2");
 	netdev_exit();
 }
 

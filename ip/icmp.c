@@ -133,8 +133,10 @@ static void icmp_echo_request(struct icmp_desc *icmp_desc, struct pkbuf *pkb)
 {
 	struct ip *iphdr = pkb2ip(pkb);
 	struct icmp *icmphdr = ip2icmp(iphdr);
-	icmpdbg("echo request data %d bytes",
-			iphdr->ip_len - iphlen(iphdr) - ICMP_HRD_SZ);
+	icmpdbg("echo request data %d bytes icmp_id %d icmp_seq %d",
+			iphdr->ip_len - iphlen(iphdr) - ICMP_HRD_SZ,
+			ntohs(icmphdr->icmp_id),
+			ntohs(icmphdr->icmp_seq));
 	if (icmphdr->icmp_code) {
 		icmpdbg("echo request packet corrupted");
 		free_pkb(pkb);

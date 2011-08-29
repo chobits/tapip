@@ -93,7 +93,15 @@ struct hlist_node {
 	struct hlist_node **pprev;
 };
 
-#define hlist_empty(head) (((struct hlist_head *)(head))->first == NULL)
+static _inline int hlist_unhashed(struct hlist_node *node)
+{
+	return !node->pprev;
+}
+
+static _inline int hlist_empty(struct hlist_head *head)
+{
+	return !head->first;
+}
 
 static _inline void hlist_head_init(struct hlist_head *head)
 {

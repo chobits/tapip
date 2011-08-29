@@ -11,6 +11,7 @@
 #define FAKE_IPADDR 0x1585140a		/* 10.20.133.21 */
 /* veth mac cannot be eth0 mac, otherwise eth0 will received arp packet */
 #define FAKE_HWADDR "\x00\x34\x45\x67\x89\xab"
+#define DEFAULT_GW 0x1485140a		/* 10.20.133.20 */
 #endif
 
 /* doc/net_topology # TOP2 */

@@ -12,7 +12,17 @@
 #include <poll.h>
 #include <errno.h>
 #include <signal.h>
+#include <assert.h>
+#include <ctype.h>
+#include <stdarg.h>
+
+/* pthread */
 #include <pthread.h>
+/* Why does not pthread.h extern this function? */
+extern int pthread_mutexattr_settype(pthread_mutexattr_t *, int);
+typedef void *(*pfunc_t)(void *);
+extern pthread_t threads[3];
+extern int newthread(pfunc_t thread_func);
 
 #define gettid() syscall(SYS_gettid)
 
@@ -51,7 +61,7 @@ do {\
 #define udpdbg(fmt, args...)\
 do {\
 	if (net_debug & NET_DEBUG_UDP)\
-		dbg(fmt, ##args);\
+		dbg(purple(udp)" "fmt, ##args);\
 } while (0)
 
 #define tcpdbg(fmt, args...)\
@@ -86,9 +96,12 @@ extern void *xmalloc(int);
 extern void perrx(char *str);
 extern int str2ip(char *str, unsigned int *ip);
 extern void printfs(int mlen, const char *fmt, ...);
+extern int parse_ip_port(char *, unsigned int *, unsigned short *);
 
 extern unsigned short ip_chksum(unsigned short *data, int size);
 extern unsigned short icmp_chksum(unsigned short *data, int size);
 extern unsigned short tcp_chksum(unsigned int src, unsigned dst,
-			unsigned short len, unsigned short *data);
+		unsigned short len, unsigned short *data);
+extern unsigned short udp_chksum(unsigned int src, unsigned int dst,
+		unsigned short len, unsigned short *data);
 #endif	/* lib.h */

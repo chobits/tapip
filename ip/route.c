@@ -66,6 +66,8 @@ void rt_init(void)
 #ifndef CONFIG_TOP1
 	/* default route: next-hop is tap ipaddr */
 	rt_add(0, 0, tap->dev.net_ipaddr, 0, RT_DEFAULT, veth);
+#else
+	rt_add(0, 0, DEFAULT_GW, 0, RT_DEFAULT, veth);
 #endif
 	dbg("route table init");
 }

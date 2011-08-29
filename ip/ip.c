@@ -2,12 +2,13 @@
 #include "ether.h"
 #include "arp.h"
 #include "ip.h"
+#include "raw.h"
+#include "udp.h"
 #include "icmp.h"
 #include "route.h"
 
 #include "lib.h"
 #include "netcfg.h"
-
 
 void ip_setchksum(struct ip *iphdr)
 {
@@ -32,6 +33,9 @@ void ip_recv_local(struct pkbuf *pkb)
 		iphdr = pkb2ip(pkb);
 	}
 
+	/* copy pkb to raw */
+	raw_in(pkb);
+
 	/* pass to upper-level */
 	switch (iphdr->ip_pro) {
 	case IP_P_ICMP:
@@ -39,11 +43,10 @@ void ip_recv_local(struct pkbuf *pkb)
 		break;
 	case IP_P_TCP:
 		free_pkb(pkb);
-		ipdbg("tcp");
+		ipdbg("tcp is not supported currently!");
 		break;
 	case IP_P_UDP:
-		free_pkb(pkb);
-		ipdbg("udp");
+		udp_in(pkb);
 		break;
 	default:
 		free_pkb(pkb);
@@ -96,7 +99,8 @@ void ip_send_dev(struct netdev *dev, struct pkbuf *pkb)
 void ip_send_out(struct pkbuf *pkb)
 {
 	struct ip *iphdr = pkb2ip(pkb);
-	if (rt_output(pkb) < 0)
+	pkb->pk_pro = ETH_P_IP;
+	if (!pkb->pk_rtdst && rt_output(pkb) < 0)
 		return;
 	ip_setchksum(iphdr);
 	ipdbg(IPFMT " -> " IPFMT "(%d/%d bytes)",
@@ -114,7 +118,6 @@ void ip_send_info(struct pkbuf *pkb, unsigned char tos, unsigned short len,
 		unsigned char ttl, unsigned char pro, unsigned int dst)
 {
 	struct ip *iphdr = pkb2ip(pkb);
-	pkb->pk_pro = ETH_P_IP;
 	/* fill header information */
 	iphdr->ip_ver = IP_VERSION_4;
 	iphdr->ip_hlen = IP_HRD_SZ / 4;

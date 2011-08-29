@@ -6,6 +6,8 @@
 
 #include "compile.h"
 #include "list.h"
+//#include "sock.h"
+
 struct pkbuf;
 struct netdev;
 
@@ -34,6 +36,7 @@ struct netdev {
 	unsigned char net_name[NETDEV_NLEN];	/* device name */
 	struct netdev_ops *net_ops;		/* Nic Operation */
 	struct netstats net_stats;		/* protocol independent statistic */
+	struct list_head net_list;		/* net device list */
 };
 #define LOCALNET(dev) ((dev)->net_ipaddr & (dev)->net_mask)
 
@@ -52,6 +55,7 @@ struct pkbuf {
 	int pk_refcnt;
 	struct netdev *pk_indev;
 	struct rtentry *pk_rtdst;
+	struct sock *pk_sk;
 	unsigned char pk_data[0];
 } __attribute__((packed));
 
@@ -66,7 +70,7 @@ struct pkbuf {
 
 static _inline unsigned short htons(unsigned short host)
 {
-	return (host >> 8) | (host << 8);
+	return (host >> 8) | ((host << 8) & 0xff00);
 }
 #define ntohs(net) htons(net)
 
@@ -119,8 +123,11 @@ extern void free_pkb(struct pkbuf *pkb);
 extern void netdev_tx(struct netdev *nd, struct pkbuf *pkb, int len,
 				unsigned short proto, unsigned char *dst);
 #endif
+
 extern int free_pkbs;
 extern int alloc_pkbs;
 extern void get_pkb(struct pkbuf *pkb);
+extern struct pkbuf *copy_pkb(struct pkbuf *pkb);
+extern int local_address(unsigned int);
 
 #endif	/* netif.h */

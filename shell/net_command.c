@@ -11,6 +11,11 @@
 
 unsigned int net_debug = 0;
 
+void usage(void)
+{
+	ferr("Usage: debug [-c|-n] (dev|l2|arp|ip|icmp|udp|tcp)+\n");
+}
+
 void signal_wait(int signum)
 {
 	sigset_t mask;
@@ -21,34 +26,53 @@ void signal_wait(int signum)
 
 void netdebug(int argc, char **argv)
 {
+	int noblock = 0;
+	int clear = 0;
+	unsigned int debug = 0;
 	do {
 		argc--;
-		if (strcmp(argv[argc], "dev") == 0) {
-			net_debug |= NET_DEBUG_DEV;
+		if (strcmp(argv[argc], "-n") == 0) {
+			noblock = 1;
+		} else if (strcmp(argv[argc], "-c") == 0) {
+			clear = 1;
+		} else if (strcmp(argv[argc], "dev") == 0) {
+			debug |= NET_DEBUG_DEV;
 		} else if (strcmp(argv[argc], "l2") == 0) {
-			net_debug |= NET_DEBUG_L2;
+			debug |= NET_DEBUG_L2;
 		} else if (strcmp(argv[argc], "arp") == 0) {
-			net_debug |= NET_DEBUG_ARP;
+			debug |= NET_DEBUG_ARP;
 		} else if (strcmp(argv[argc], "ip") == 0) {
-			net_debug |= NET_DEBUG_IP;
+			debug |= NET_DEBUG_IP;
 		} else if (strcmp(argv[argc], "icmp") == 0) {
-			net_debug |= NET_DEBUG_ICMP;
+			debug |= NET_DEBUG_ICMP;
 		} else if (strcmp(argv[argc], "udp") == 0) {
-			net_debug |= NET_DEBUG_UDP;
+			debug |= NET_DEBUG_UDP;
 		} else if (strcmp(argv[argc], "tcp") == 0) {
-			net_debug |= NET_DEBUG_TCP;
+			debug |= NET_DEBUG_TCP;
 		} else if (strcmp(argv[argc], "all") == 0) {
-			net_debug |= NET_DEBUG_ALL;
+			debug |= NET_DEBUG_ALL;
 		} else {
-			ferr("Usage: debug (dev|l2|arp|ip|icmp|udp|tcp)+\n");
+			usage();
 			return;
 		}
 	} while (argc > 1);
-	ferr("enter ^C to exit debug mode\n");
 
+	/* clear debug flags */
+	if (clear) {
+		if (debug)
+			net_debug &= ~debug;
+		else
+			net_debug = 0;
+		return;
+	}
+
+	net_debug |= debug;
+	if (noblock)
+		return;
+	/* block mode */
+	ferr("enter ^C to exit debug mode\n");
 	/* waiting for interrupt signal */
 	signal_wait(SIGQUIT);
-
 	net_debug = 0;
 	ferr("\nexit debug mode\n");
 }

@@ -8,18 +8,24 @@
 #include "list.h"
 #include "netcfg.h"
 
+/* localhost net device list */
+struct list_head net_devices;
+
 extern void loop_init(void);
 extern void veth_init(void);
 extern void loop_exit(void);
 extern void veth_exit(void);
 extern void veth_poll(void);
 
-/* Altough dev is already created, this function is safe! */
+/* Alloc localhost net devices */
 struct netdev *netdev_alloc(char *devstr, struct netdev_ops *netops)
 {
 	struct netdev *dev;
 	dev = xmalloc(sizeof(*dev));
 	memset(dev, 0x0, sizeof(*dev));
+	/* add into localhost net device list */
+	list_add_tail(&dev->net_list, &net_devices);
+	/* set name */
 	dev->net_name[NETDEV_NLEN - 1] = '\0';
 	strncpy((char *)dev->net_name, devstr, NETDEV_NLEN - 1);
 	dev->net_ops = netops;
@@ -32,6 +38,7 @@ void netdev_free(struct netdev *dev)
 {
 	if (dev->net_ops && dev->net_ops->exit)
 		dev->net_ops->exit(dev);
+	list_del(&dev->net_list);
 	free(dev);
 }
 
@@ -43,6 +50,7 @@ void netdev_interrupt(void)
 /* create veth and lo */
 void netdev_init(void)
 {
+	list_init(&net_devices);
 	loop_init();
 	veth_init();
 }
@@ -79,3 +87,19 @@ void netdev_tx(struct netdev *dev, struct pkbuf *pkb, int len,
 	free_pkb(pkb);
 }
 
+int local_address(unsigned int addr)
+{
+	struct netdev *dev;
+	/* wildchar */
+	if (!addr)
+		return 1;
+	/* loop back address */
+	if (LOCALNET(loop) == (loop->net_mask & addr))
+		return 1;
+	/* nic bind address */
+	list_for_each_entry(dev, &net_devices, net_list) {
+		if (dev->net_ipaddr == addr)
+			return 1;
+	}
+	return 0;
+}

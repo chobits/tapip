@@ -5,8 +5,17 @@
 #include "ether.h"
 #include "lib.h"
 
+#define MAX_PKBS 200
 int free_pkbs = 0;
 int alloc_pkbs = 0;
+
+#define pkb_safe() \
+do {\
+	if ((alloc_pkbs - free_pkbs) > MAX_PKBS) {\
+		dbg("oops: too many pkbuf");\
+		exit(EXIT_FAILURE);\
+	}\
+} while (0)
 
 /* referred from linux-2.6: handing packet l2 padding */
 void pkb_trim(struct pkbuf *pkb, int len)
@@ -28,12 +37,25 @@ struct pkbuf *alloc_pkb(int size)
 	pkb->pk_rtdst = NULL;
 	list_init(&pkb->pk_list);
 	alloc_pkbs++;
+	pkb_safe();
 	return pkb;
 }
 
 struct pkbuf *alloc_netdev_pkb(struct netdev *nd)
 {
 	return alloc_pkb(nd->net_mtu + ETH_HRD_SZ);
+}
+
+struct pkbuf *copy_pkb(struct pkbuf *pkb)
+{
+	struct pkbuf *cpkb;
+	cpkb = xmalloc(pkb->pk_len);
+	memcpy(cpkb, pkb, pkb->pk_len);
+	cpkb->pk_refcnt = 1;
+	list_init(&cpkb->pk_list);
+	alloc_pkbs++;
+	pkb_safe();
+	return cpkb;
 }
 
 #ifdef DEBUG_PKB

@@ -13,6 +13,7 @@
 struct tapdev *tap;
 struct netdev *veth;
 
+/* Altough dev is already created, this function is safe! */
 static int tap_dev_init(void)
 {
 	tap = xmalloc(sizeof(*tap));
@@ -33,6 +34,8 @@ static int tap_dev_init(void)
 	setup_tap(tap->dev.net_name);
 #endif
 	unset_tap();
+	/* Dont add tap device into local net device list */
+	list_init(&tap->dev.net_list);
 	return 0;
 
 close_tap:

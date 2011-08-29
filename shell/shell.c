@@ -1,16 +1,10 @@
 /*
  * simple shell for net stack debug and monitor
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <signal.h>
-#include <errno.h>
-#include <ctype.h>
-
 #include "lib.h"
 #include "arp.h"
 
+static void signal_init(void);
 /* extern builtin command handlers */
 static void builtin_help(int argc, char **argv);
 static void builtin_exit(int argc, char **argv);
@@ -23,32 +17,45 @@ extern void ifconfig(int, char **);
 extern void pkb(int, char **);
 extern void route(int, char **);
 extern void ping(int, char **);
+extern void ping2(int, char **);
+extern void udp_test(int, char **);
 
 static char *prompt = "[net shell]";
 static int quit;
 
 struct command {
+	int cmd_new;	/* new thread flag */
 	int cmd_num;
 	void (*cmd_func)(int, char **);
 	char *cmd_str;
 	char *cmd_help;
 };
 
-#define CMD_NONUM -1	/* Arguments is parsed in command function. */
+struct cmd_args {
+	int argc;
+	char **argv;
+	struct command *cmd;
+};
+
+#define CMD_NONUM -1	/* Arguments are checked in command function. */
 
 static struct command cmds[] = {
 	/* built-in command */
-	{ CMD_NONUM, builtin_help, "help", "display shell command information" },
-	{ CMD_NONUM, builtin_clear, "clear", "clear the terminal screen" },
-	{ CMD_NONUM, builtin_exit, "exit", "exit shell" },
+	{ 0, CMD_NONUM, builtin_help, "help", "display shell command information" },
+	{ 0, CMD_NONUM, builtin_clear, "clear", "clear the terminal screen" },
+	{ 0, CMD_NONUM, builtin_exit, "exit", "exit shell" },
 	/* net stack command */
-	{ CMD_NONUM, netdebug, "debug", "debug dev|l2|arp|ip|icmp|udp|tcp|all" },
-	{ CMD_NONUM, ping, "ping", "ping [OPTIONS] ipaddr" },
-	{ 1, arpcache, "arpcache", "see arp cache" },
-	{ 1, route, "route", "show / manipulate the IP routing table" },
-	{ 1, ifconfig, "ifconfig", "configure a network interface" },
-	{ 1, pkb, "pkb", "display pkb information" },
-	{ 0, NULL, NULL, NULL }	/* last one flag */
+	{ 0, CMD_NONUM, netdebug, "debug", "debug dev|l2|arp|ip|icmp|udp|tcp|all" },
+	{ 0, CMD_NONUM, ping2, "ping2", "ping [OPTIONS] ipaddr(Internal stack implementation)" },
+	{ 0, 1, arpcache, "arpcache", "see arp cache" },
+	{ 0, 1, route, "route", "show / manipulate the IP routing table" },
+	{ 0, 1, ifconfig, "ifconfig", "configure a network interface" },
+	{ 0, 1, pkb, "pkb", "display pkb information" },
+	/* new thread command */
+	{ 1, CMD_NONUM, ping, "ping", "ping [OPTIONS] ipaddr" },
+	{ 1, CMD_NONUM, udp_test, "udp_test", "test udp recv and send" },
+	/* last one */
+	{ 0, 0, NULL, NULL, NULL }
 };
 
 static void builtin_clear(int argc, char **argv)
@@ -76,9 +83,14 @@ static int get_line(char *buf, int bufsz)
 	int len;
 	p = fgets(buf, bufsz - 1, stdin);
 	if (!p) {
-		if (errno)
+		/*
+		 * Ctrl+D also cause interrupt.
+		 * Because int signal is set RESTART, so other interrupts
+		 * will not return from fgets.
+		 */
+		if (errno && errno != EINTR)
 			perrx("fgets");
-		/* EOF (Ctrl + D) */
+		/* EOF (Ctrl + D) is set as exit command */
 		printf("exit\n");
 		strcpy(buf, "exit");
 		p = buf;
@@ -124,9 +136,30 @@ static int parse_line(char *line, int len, char **argv)
 
 	p = pp = line;
 	argc = 0;
-	while (p = get_arg(&pp))
+	while ((p = get_arg(&pp)) != NULL)
 		argv[argc++] = p;
 	return argc;
+}
+
+static void *command_thread_func(void *data)
+{
+	struct cmd_args *arg = (struct cmd_args *)data;
+	arg->cmd->cmd_func(arg->argc, arg->argv);
+	pthread_exit(NULL);
+}
+
+static void command_new_thread(struct command *cmd, int argc, char **argv)
+{
+	pthread_t tid;
+	struct cmd_args arg;
+	/* FIXME:  copy @argv for new thread */
+	arg.argc = argc;
+	arg.argv = argv;
+	arg.cmd = cmd;
+	if (pthread_create(&tid, NULL, command_thread_func, (void *)&arg))
+		perrx("pthread_create");
+	pthread_join(tid, NULL);
+	signal_init();
 }
 
 static void parse_args(int argc, char **argv)
@@ -145,7 +178,10 @@ handle_command:
 		ferr("shell: %s needs %d commands\n", cmd->cmd_str, cmd->cmd_num);
 		ferr("       %s: %s\n", cmd->cmd_str, cmd->cmd_help);
 	} else {
-		cmd->cmd_func(argc, argv);
+		if (cmd->cmd_new)
+			command_new_thread(cmd, argc, argv);
+		else
+			cmd->cmd_func(argc, argv);
 	}
 }
 
