@@ -1,0 +1,15 @@
++ What is tapip?
+   A mutlithreaded TCP/IP stack based on linux tap device
+
++ How to implement?
+   I refer to xinu and Linux 2.6.11 TCP/IP stack
+    and use linux tap device to simulate net device(for l2).
+   A small shell is embedded in tapip.
+   So this is just user-mode TCP/IP stack :)
+
++ Any use? 
+  A toy!
+  Tapip makes it easy to hack TCP/IP stack, just compiling it to run.
+  It can also do some network test: arp snooping, proxy, and NAT!
+  I think the most important is that tapip helps me learn TCP/IP, and
+   understand linux TCP/IP stack.
