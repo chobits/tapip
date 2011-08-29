@@ -1,0 +1,19 @@
+1. (done)
+ Ping2 10.0.0.2
+ one reply packet is dropped!
+---
+ pkb::pk_pro is not set!
+2.
+ TCP protocol implementation
+3.
+ network debug tools:
+  traceroute, arping, ss, route, arp, ip [...]
+4.
+ In TOP1, l2 cannot receive its reply packet sometimes!
+ Should we using a single thread to receive packet and
+ another thread to parse it?
+5.
+ Ping2 cause segment fault sometimes!
+6.
+ Add bridge programming, then we should not use brctl
+ and can delete doc/brctl.sh
