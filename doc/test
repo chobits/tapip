@@ -93,3 +93,24 @@
 	[net shell]: ping 127.1.2.3
 	(waiting debug information)
 
+================================================
+9. udp test for sending packet
+
+(tom)	tom # sudo iptables -I INPUT 9 -p udp -s 10.0.0.1 -j ACCEPT
+	tom # nc -l 12341
+        (waiting bob's message)
+
+(bob)	bob # sudo ./net_stack
+	[net shell]: udp_test -c 10.0.0.2:12345
+        (input something)
+
+================================================
+10. udp test for receiving packet
+
+(tom)	tom # nc 10.0.0.1 12345
+        (input something)
+
+(bob)	bob # sudo ./net_stack
+	[net shell]: udp_test -b 10.0.0.1:12345
+        (waiting tom's message)
+
