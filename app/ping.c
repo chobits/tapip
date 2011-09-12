@@ -151,8 +151,17 @@ static void sigint(int num)
 	alarm(0);
 	/* if we dont close socket, then recv still block socket!! */
 	if (sock) {
-		_close(sock);
+		/*
+		 * set sock to NULL before close it
+		 * Otherwise shell thread close it when I enter Ctrl + C to
+		 * send an interrupt signal to main thread,
+		 * and then ping thread will wake up to close it also,
+		 * which cause a segment fault for double freeing.
+		 * FIXME: send tty signal to ping thread
+		 */
+		struct socket *tmp = sock;
 		sock = NULL;
+		_close(tmp);
 	}
 	ping_stat();
 }
@@ -213,8 +222,9 @@ void ping(int argc, char **argv)
 
 	alarm(0);
 	if (sock) {
-		_close(sock);
+		struct socket *tmp = sock;
 		sock = NULL;
+		_close(tmp);
 	}
 	if (buf)
 		free(buf);
