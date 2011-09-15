@@ -16,7 +16,7 @@ do {\
 		dbg(fmt "\n", ##args);\
 } while (0)
 
-static int flags;
+static unsigned int flags;
 static struct socket *sock;
 static struct sock_addr skaddr;
 
@@ -27,13 +27,12 @@ static void sigint(int num)
 		_close(sock);
 		sock = NULL;
 	}
-	printf("1\n");
 }
 
 static void usage(void)
 {
 	printf(
-		"udp_test - simplex arbitrary UDP connections and listens\n"
+		"udp_test - simple arbitrary UDP connections and listens\n"
 		"Usage: udp_test [OPTIONS]\n"
 		"OPTIONS:\n"
 		"      -d             display extra debug information\n"
@@ -158,7 +157,6 @@ static void init_options(void)
 	sock = NULL;
 }
 
-/* raw ping: we should use raw ip instead of it sometime */
 void udp_test(int argc, char **argv)
 {
 	struct sigaction act = { };
