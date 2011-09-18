@@ -9,22 +9,22 @@
 #         /         \
 #     network(gw)   /dev/net/tun
 #                     \
-#                    veth (./net_stack)
+#                    veth (./tapip)
 #
-# NOTE: We view tap0, /dev/net/tun and veth(./net_stack) as one interface,
+# NOTE: We view tap0, /dev/net/tun and veth(./tapip) as one interface,
 #       They should have only one mac address(eth0 mac), which will
 #       handle arp protocol right.
-#       Then eth0, br0, tap0, /dev/net/tun and veth(./net_stack) can be
+#       Then eth0, br0, tap0, /dev/net/tun and veth(./tapip) can be
 #       viewed as only one interface, which is similar as the original
-#       real eth0 interface, and ./net_stack will become its internal
+#       real eth0 interface, and ./tapip will become its internal
 #       TCP/IP stack!
 #
-#       veth mac address _MUST NOT_ be eth0 mac address,
+#       veth mac address must _NOT_ be eth0 mac address,
 #       otherwise br0 dont work, in which case arp packet will not be passed
 #       to veth
 #
 # WARNING: This test will suspend real kernel TCP/IP stack!
-#          And we should not need kernel route table and arp cache.
+#          And we dont need kernel route table and arp cache.
 
 openbr() {
 	#create tap0
@@ -37,7 +37,7 @@ openbr() {
 	brctl addif br0 eth0
 	brctl addif br0 tap0
 
-	# net interface up (clear ip, ./net_stack will set it)
+	# net interface up (clear ip, ./tapip will set it)
 	ifconfig eth0 0.0.0.0 up
 	ifconfig tap0 0.0.0.0 up
 	ifconfig br0 0.0.0.0 up

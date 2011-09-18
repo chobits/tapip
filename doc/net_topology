@@ -1,5 +1,5 @@
 =============================================================================
-TOP1
+TOP1 (Use tapip instead of kernel TCP/IP stack)
 =============================================================================
 
 +----------+
@@ -43,10 +43,12 @@ real network of TOP1
 
 =============================================================================
 How to build net environment of TOP1
- # (add "#define CONFIG_TOP1 to ./include/netcfg.h")
+ # (fix "CONFIG_TOP = 1" in global Makefile)
+ # (config real net environment in doc/brctl.sh)
  # ./doc/brctl.sh open
- # ./net_stack
- .....................
+ # ./tapip
+ [net shell]: (run some commands)
+ ...
  # ./doc/brctl.sh close
 
 =============================================================================
@@ -72,13 +74,13 @@ softirq: net_rx_action() --> netif_receive_skb() --> handle_bridge()
    \|/
 dev_queue_xmit(skb) --> tun_net_xmit()
  [skb->dev == tap0]     1. put skb into tun's skbqueue
-                        2. wake up process(./net_stack) waiting
+                        2. wake up process(./tapip) waiting
                                     for /dev/net/tun (read/poll)
                              |
                              |
                             \|/
                          process (read/poll)
-                       ( ./net_stack            )
+                       ( ./tapip            )
                        { usermode network stack }
 
 
@@ -121,11 +123,11 @@ dev_queue_xmit(skb) --> {eth0 netdevice}_hard_xmit()
 
 
 =============================================================================
-TOP2
+TOP2 (tapip communicates with kernel TCP/IP stack)
 =============================================================================
 
    localhost                   outside network
-   kernel stack                usermode stack [ ./net_stack ]
+   kernel stack                usermode stack [ ./tapip ]
        |                         (10.0.0.1)
        |                 (write) |        . (read)
        |                        \|/      /|\
@@ -170,5 +172,5 @@ arping received <----- socket recv <--  tap0(netif_rx) <----.  |                
 NOTE: 10.0.0.2 is  tap0 ip address, not our network stack ip address.
 Our network stack(veth) is `outside network` in terms of tap0,
 so our program is just an emulator of outside network,
-we must assign a fake ip address(10.0.0.1) for ./net_stack virtual netif veth !
+we must assign a fake ip address(10.0.0.1) for ./tapip virtual netif veth !
 

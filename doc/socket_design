@@ -35,25 +35,25 @@ Fucntion calling path:
  (sock->sk_prot == inet_protosw->prot)
 
 
-My socket model
+Tapip socket model
 ====================================================
 
-socket                      
+socket
    `------> +---------+-+
             |  sock   | |   --> PF_INET      [family]
             +---------+ |
             | tcp_sock  |   --> SOCK_STREAM  [type]
-            | +-------+ |
-            | |tcb    | |       IPPROTO_TCP  [protocol]
-            | +-------+ |
+            |           |
+            | /* tcb */ |       IPPROTO_TCP  [protocol]
+            |           |
             +-----------+
-             
- tcp_sock::tcb is Transmission Control Block(TCB) of RFC 793
+
+ tcp_sock::somefield is Transmission Control Block(TCB) of RFC 793
 ----------------------------------------------------
-socket->ops (inet_ops) 
+socket->ops (inet_ops)
 sock->ops   (tcp_ops)
 
 Fucntion calling path:
   _send()
-    -> inet_send()
-      -> tcp_send()
+    -> socket->ops->send() [inet_send]
+      -> sock->ops->send() [tcp_send]

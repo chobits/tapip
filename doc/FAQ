@@ -53,7 +53,7 @@ Frequently Asked Questions for TCP or Socket
     firstly, and recall recv() because of -ERESTARTSYS.
     Because sigint() close the socket, the restarted recv() will report
     a error.
-  
+
    Let us see a brief runtime stream:
     ./a.out
       => recv =...=> schedule_timeout() [pending]
@@ -65,3 +65,46 @@ Frequently Asked Questions for TCP or Socket
 
   I use pthread condition to simulate blocking model of wait_for_packet().
   and simulate signal handling!
+
+4. How does tcp input layer work?
+  Sanity Check
+   --> Sock lookup(tcb)
+    --> second check according to sock and tcp packet
+     --> state handler according to current tcb state and packet
+         (RFC 793 #Segment Arrive)
+
+5. Why does nc receive only one message via UDP?
+ e.g:
+  [tty1]# nc -u -l 12345
+   (waiting first one)
+  hello
+   (waiting second one)
+   (no `world` received)
+
+  [tty2]# ./tapip
+  [net shell]: udp_test -c10.20.133.21:12345
+   (enter first one)
+  hello
+   (enter second one)
+  world
+
+ When nc waits for the first message, it doesnt bind specific local address.
+ Its connection is <local *:12345>-<remote *:*>.
+ When udp_test sends the first message, nc bind local address: 10.0.0.2(tap0 ip)
+ Although 10.20.133.21(eth0 ip) is local address, but this connection is
+ <local 10.0.0.2:12345>-<remote 10.0.0.1:32768>.
+ So second message(`world`) to 10.20.133.21 is dropped by kernel stack!
+
+6. How to avoid race conditions during looking up sock?
+  Let us first see how linux handles this:
+  1. raw ip: using read/write lock for raw sock hash table
+  2. udp:     get sock reference during looking up sock
+          and read/write lock
+  3. tcp:     get sock reference during looking up sock
+          and read/write lock for listener list
+          and other locks for each hash list
+
+7. Which hash list is TCP_SYN_SENT sock in?
+  In tcp established hash list, in which case we can find it fast
+  when third handshake ack packet arrives.
+
