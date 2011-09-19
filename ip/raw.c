@@ -18,6 +18,7 @@ void raw_in(struct pkbuf *pkb)
 	struct ip *iphdr = pkb2ip(pkb);
 	struct pkbuf *rawpkb;
 	struct sock *sk;
+	/* FIXME: lock for raw lookup */
 	sk = raw_lookup_sock(iphdr->ip_src, iphdr->ip_dst, iphdr->ip_pro);
 	while (sk) {
 		rawpkb = copy_pkb(pkb);
@@ -25,21 +26,5 @@ void raw_in(struct pkbuf *pkb)
 		/* for all matched raw sock */
 		sk = raw_lookup_sock_next(sk, iphdr->ip_src, iphdr->ip_dst,
 							iphdr->ip_pro);
-	}
-}
-
-struct wait raw_send_wait;
-struct list_head raw_send_queue;
-
-void raw_out(void)
-{
-	struct pkbuf *pkb;
-	while (1) {
-		while (list_empty(&raw_send_queue))
-			sleep_on(&raw_send_wait);
-
-		pkb = list_first_entry(&raw_send_queue, struct pkbuf, pk_list);
-		list_del_init(&pkb->pk_list);
-		ip_send_out(pkb);
 	}
 }

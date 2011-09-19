@@ -9,6 +9,7 @@
 
 static unsigned short raw_id;
 static struct hlist_head raw_hash_table[IP_P_MAX];
+/* FIXME: read/write lock for raw_hash_table */
 
 static _inline int __raw_hash_func(int protocol)
 {
@@ -25,16 +26,11 @@ static void raw_unhash(struct sock *sk)
 	sock_del_hash(sk);
 }
 
-static void raw_hash(struct sock *sk)
+static int raw_hash(struct sock *sk)
 {
 	struct hlist_head *hash_head = &raw_hash_table[raw_hash_func(sk)];
 	sock_add_hash(sk, hash_head);
-}
-
-static void raw_send_notify(struct sock *sk)
-{
-	if (!list_empty(&raw_send_queue))
-		wake_up(&raw_send_wait);
+	return 0;
 }
 
 static void raw_init_pkb(struct sock *sk, struct pkbuf *pkb,
@@ -55,8 +51,7 @@ static void raw_init_pkb(struct sock *sk, struct pkbuf *pkb,
 
 static int raw_send_pkb(struct sock *sk, struct pkbuf *pkb)
 {
-	list_add_tail(&pkb->pk_list, &raw_send_queue);
-	sk->ops->send_notify(sk);
+	ip_send_out(pkb);
 	return pkb->pk_len - ETH_HRD_SZ - IP_HRD_SZ;
 }
 
@@ -78,7 +73,6 @@ static int raw_send_buf(struct sock *sk, void *buf, int size,
 static struct sock_ops raw_ops = {
 	.recv_notify = sock_recv_notify,
 	.recv = sock_recv_pkb,
-	.send_notify = raw_send_notify,
 	.send_pkb = raw_send_pkb,
 	.send_buf = raw_send_buf,
 	.hash = raw_hash,
@@ -107,11 +101,6 @@ void raw_init(void)
 	for (i = 0; i < IP_P_MAX; i++)
 		hlist_head_init(&raw_hash_table[i]);
 	raw_id = 0;
-	wait_init(&raw_send_wait);
-	list_init(&raw_send_queue);
-
-	threads[2] = newthread((pfunc_t)raw_out);
-
 	dbg("raw ip init");
 }
 
@@ -142,8 +131,10 @@ struct sock *raw_lookup_sock_next(struct sock *sk,
 struct sock *raw_lookup_sock(unsigned int src, unsigned int dst, int proto)
 {
 	struct hlist_head *hash_head = &raw_hash_table[__raw_hash_func(proto)];
+	struct sock *sk;
 	if (hlist_empty(hash_head))
 		return NULL;
-	return __raw_lookup_sock(hash_head, src, dst, proto);
+	sk = __raw_lookup_sock(hash_head, src, dst, proto);
+	return sk;
 }
 
