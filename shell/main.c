@@ -6,12 +6,14 @@
 #include "route.h"
 #include "socket.h"
 
-extern void test_shell(char *);
+extern void shell_master(char *);
+extern void *shell_worker(void *);
+extern void shell_int(void);
 
 /*
  * 0 timer
  * 1 core stack
- * 2 raw ip output process
+ * 2 shell worker
  */
 pthread_t threads[3];
 
@@ -29,18 +31,22 @@ void net_stack_init(void)
 	arp_cache_init();
 	rt_init();
 	socket_init();
+	shell_init();
 }
 
 void net_stack_run(void)
 {
 	/* create timer thread */
 	threads[0] = newthread((pfunc_t)net_timer);
-	dbg("net_timer thread 0: net_timer");
+	dbg("thread 0: net_timer");
 	/* create netdev thread */
 	threads[1] = newthread((pfunc_t)netdev_interrupt);
-	dbg("netdev_interrupt thread 1: netdev_interrupt");
+	dbg("thread 1: netdev_interrupt");
+	/* shell worker thread */
+	threads[2] = newthread((pfunc_t)shell_worker);
+	dbg("thread 2: shell worker");
 	/* net shell runs! */
-	test_shell(NULL);
+	shell_master(NULL);
 }
 
 void net_stack_exit(void)
@@ -49,7 +55,8 @@ void net_stack_exit(void)
 		perror("kill child 0");
 	if (pthread_cancel(threads[1]))
 		perror("kill child 1");
-	if (pthread_cancel(threads[2]))
+	/* shell work will be killed by shell master */
+	if (pthread_join(threads[2], NULL))
 		perror("kill child 2");
 	netdev_exit();
 }
@@ -59,6 +66,7 @@ int main(int argc, char **argv)
 	net_stack_init();
 	net_stack_run();
 	net_stack_exit();
-
+	dbg("wait system exit");
+	/* FIXME: release all alloced resources */
 	return 0;
 }

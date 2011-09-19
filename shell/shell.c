@@ -19,9 +19,7 @@ extern void route(int, char **);
 extern void ping(int, char **);
 extern void ping2(int, char **);
 extern void udp_test(int, char **);
-
-static char *prompt = "[net shell]";
-static int quit;
+extern void tcp_test(int, char **);
 
 struct command {
 	int cmd_new;	/* new thread flag */
@@ -36,6 +34,28 @@ struct cmd_args {
 	char **argv;
 	struct command *cmd;
 };
+
+static char *prompt = "[net shell]";
+static pthread_cond_t master_cond;
+static pthread_mutex_t master_mutex;
+static int master_quit;
+
+static struct cmd_args work, *pending_work;
+static pthread_cond_t worker_cond;
+static pthread_mutex_t worker_mutex;
+static int work_quit;
+
+void shell_init(void)
+{
+	pthread_cond_init(&worker_cond, NULL);
+	pthread_mutex_init(&worker_mutex, NULL);
+	pthread_cond_init(&master_cond, NULL);
+	pthread_mutex_init(&master_mutex, NULL);
+	/* No work at boot-up stage */
+	pending_work = NULL;
+	work_quit = 0;
+	master_quit = 0;
+}
 
 #define CMD_NONUM -1	/* Arguments are checked in command function. */
 
@@ -54,8 +74,9 @@ static struct command cmds[] = {
 	/* new thread command */
 	{ 1, CMD_NONUM, ping, "ping", "ping [OPTIONS] ipaddr" },
 	{ 1, CMD_NONUM, udp_test, "udp_test", "test udp recv and send" },
+	{ 1, CMD_NONUM, tcp_test, "tcp_test", "test tcp process" },
 	/* last one */
-	{ 0, 0, NULL, NULL, NULL }
+	{ 0, 0, NULL, NULL, NULL }	/* can also use sizeof(cmds)/sizeof(cmds[0]) for cmds number */
 };
 
 static void builtin_clear(int argc, char **argv)
@@ -69,12 +90,16 @@ static void builtin_help(int argc, char **argv)
 	int i;
 	for (i = 1, cmd = &cmds[0]; cmd->cmd_num; i++, cmd++)
 		printf(" %d  %s: %s\n", i, cmd->cmd_str, cmd->cmd_help);
-
 }
 
 static void builtin_exit(int argc, char **argv)
 {
-	quit = 1;
+	master_quit = 1;
+	work_quit = 1;
+	pthread_cond_signal(&worker_cond);
+	/* Should we destroy it during exit? */
+	pthread_cond_destroy(&worker_cond);
+	pthread_cond_destroy(&master_cond);
 }
 
 static int get_line(char *buf, int bufsz)
@@ -141,25 +166,20 @@ static int parse_line(char *line, int len, char **argv)
 	return argc;
 }
 
-static void *command_thread_func(void *data)
+void *shell_worker(void *none)
 {
-	struct cmd_args *arg = (struct cmd_args *)data;
-	arg->cmd->cmd_func(arg->argc, arg->argv);
-	pthread_exit(NULL);
-}
-
-static void command_new_thread(struct command *cmd, int argc, char **argv)
-{
-	pthread_t tid;
-	struct cmd_args arg;
-	/* FIXME:  copy @argv for new thread */
-	arg.argc = argc;
-	arg.argv = argv;
-	arg.cmd = cmd;
-	if (pthread_create(&tid, NULL, command_thread_func, (void *)&arg))
-		perrx("pthread_create");
-	pthread_join(tid, NULL);
-	signal_init();
+	while (!work_quit) {
+		while (!pending_work) {
+			pthread_cond_wait(&worker_cond, &worker_mutex);
+			if (work_quit)
+				goto out;
+		}
+		pending_work->cmd->cmd_func(pending_work->argc, pending_work->argv);
+		pending_work = NULL;
+		pthread_cond_signal(&master_cond);
+	}
+out:
+	dbg("shell worker exit");
 }
 
 static void parse_args(int argc, char **argv)
@@ -167,21 +187,27 @@ static void parse_args(int argc, char **argv)
 	struct command *cmd;
 	for (cmd = &cmds[0]; cmd->cmd_num; cmd++) {
 		if (strcmp(cmd->cmd_str, argv[0]) == 0)
-			goto handle_command;
+			goto runcmd;
 	}
 
 	ferr("-shell: %s: command not found\n", argv[0]);
 	return;
 
-handle_command:
+runcmd:
 	if (cmd->cmd_num != CMD_NONUM && cmd->cmd_num != argc) {
 		ferr("shell: %s needs %d commands\n", cmd->cmd_str, cmd->cmd_num);
 		ferr("       %s: %s\n", cmd->cmd_str, cmd->cmd_help);
+	} else if (cmd->cmd_new) {
+		work.argc = argc;
+		work.argv = argv;
+		work.cmd = cmd;
+		pending_work = &work;
+		pthread_cond_signal(&worker_cond);
+		while (pending_work)
+			pthread_cond_wait(&master_cond, &master_mutex);
+		signal_init();
 	} else {
-		if (cmd->cmd_new)
-			command_new_thread(cmd, argc, argv);
-		else
-			cmd->cmd_func(argc, argv);
+		cmd->cmd_func(argc, argv);
 	}
 }
 
@@ -218,20 +244,18 @@ static void signal_init(void)
 		perrx("sigaction SIGOUT");
 }
 
-void test_shell(char *prompt_str)
+void shell_master(char *prompt_str)
 {
 	char linebuf[256];
 	int linelen;
 	char *argv[16];
 	int argc;
 
+	/* shell master */
 	if (prompt_str && *prompt_str)
 		prompt = prompt_str;
-
-	quit = 0;
 	signal_init();
-
-	while (1) {
+	while (!master_quit) {
 		print_prompt();
 		linelen = get_line(linebuf, 256);
 		argc = parse_line(linebuf, linelen, argv);
@@ -239,8 +263,6 @@ void test_shell(char *prompt_str)
 			parse_args(argc, argv);
 		else if (argc < 0)
 			ferr("-shell: too many arguments\n");
-		if (quit)
-			break;
 	}
 }
 
