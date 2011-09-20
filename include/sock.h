@@ -21,11 +21,14 @@ struct sock_ops {
 	int (*send_pkb)(struct sock *, struct pkbuf *);
 	int (*send_buf)(struct sock *, void *, int, struct sock_addr *);
 	struct pkbuf *(*recv)(struct sock *);
-	void (*hash)(struct sock *);
+	int (*hash)(struct sock *);
 	void (*unhash)(struct sock *);
 	int (*bind)(struct sock *, struct sock_addr *);
+	int (*connect)(struct sock *, struct sock_addr *);
 	int (*set_port)(struct sock *, unsigned short);
 	int (*close)(struct sock *);
+	int (*listen)(struct sock *, int);
+	struct sock *(*accept)(struct sock *);
 };
 
 /* PF_INET family sock structure */
@@ -34,6 +37,7 @@ struct sock {
 	struct sock_addr sk_addr;
 	struct socket *sock;
 	struct sock_ops *ops;
+	struct rtentry *sk_dst;
 	/*
 	 * FIXME: lock for recv_queue, or
 	 *        Should we add recv_queue into recv_wait,
@@ -43,8 +47,6 @@ struct sock {
 	struct wait *recv_wait;
 	unsigned int hash;	/* hash num for sock hash table lookup */
 	struct hlist_node hash_list;
-	struct list_head listen_list;
-	int backlog;		/* max connection number */
 	int refcnt;
 } __attribute__((packed));
 
@@ -67,5 +69,6 @@ extern void free_sock(struct sock *sk);
 extern void sock_recv_notify(struct sock *sk);
 extern struct pkbuf *sock_recv_pkb(struct sock *sk);
 extern int sock_close(struct sock *sk);
+extern int sock_autobind(struct sock *);
 
 #endif	/* sock.h */

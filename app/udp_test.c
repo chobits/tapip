@@ -20,13 +20,19 @@ static unsigned int flags;
 static struct socket *sock;
 static struct sock_addr skaddr;
 
+static void close_socket(void)
+{
+	struct socket *tmp;
+	if (sock) {
+		tmp = sock;
+		sock = NULL;
+		_close(tmp);
+	}
+}
+
 static void sigint(int num)
 {
-	/* if we dont close socket, then recv still block socket!! */
-	if (sock) {
-		_close(sock);
-		sock = NULL;
-	}
+	close_socket();
 }
 
 static void usage(void)
@@ -157,9 +163,18 @@ static void init_options(void)
 	sock = NULL;
 }
 
+static int init_signal(void)
+{
+	struct sigaction act = { };	/* zero */
+	act.sa_flags = 0;		/* No restart */
+	act.sa_handler = sigint;
+	if (sigaction(SIGINT, &act, NULL) < 0)
+		return -1;
+	return 0;
+}
+
 void udp_test(int argc, char **argv)
 {
-	struct sigaction act = { };
 	int err;
 	/* init arguments */
 	init_options();
@@ -170,9 +185,7 @@ void udp_test(int argc, char **argv)
 		return;
 	}
 	/* signal install */
-	act.sa_flags = 0;	/* No restart */
-	act.sa_handler = sigint;
-	if (sigaction(SIGINT, &act, NULL) < 0)
+	if (init_signal() < 0)
 		goto out;
 	/* init socket */
 	sock = _socket(AF_INET, SOCK_DGRAM, 0);
@@ -183,10 +196,6 @@ void udp_test(int argc, char **argv)
 		recv_packet();
 	else
 		send_packet();
-	/* close and out */
-out:
-	if (sock) {
-		_close(sock);
-		sock = NULL;
-	}
+out:	/* close and out */
+	close_socket();
 }

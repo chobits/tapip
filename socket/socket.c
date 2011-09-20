@@ -53,49 +53,70 @@ static struct socket *alloc_socket(int family, int type)
 
 struct socket *_socket(int family, int type, int protocol)
 {
-	struct socket *sock;
+	struct socket *sock = NULL;
 	/* only support AF_INET */
 	if (family != AF_INET)
-		return NULL;
-
+		goto out;
+	/* alloc new socket */
 	sock = alloc_socket(family, type);
+	if (!sock)
+		goto out;
 	/* only support AF_INET */
 	sock->ops = &inet_ops;
-
 	/* assert sock->ops->socket */
 	if (sock->ops->socket(sock, protocol) < 0) {
 		free_socket(sock);
 		sock = NULL;
 	}
-
+	/* only support AF_INET */
+out:
 	return sock;
 }
 
 int _listen(struct socket *sock, int backlog)
 {
-	/*
-	if (backlog < 0 || backlog > MAX_BACKLOG)
-		return -1;
-	if (sock->state != SS_UNCONNECTED)
-		return -1;
-	sock->state = SS_LISTEN;
-	sock->sk->backlog = backlog;
-	list_add(&sock->sk->listen_list, &listen_head);
-	*/
-	return 0;
+	int err = -1;
+	if (!sock || backlog < 0)
+		goto out;
+	get_socket(sock);
+	if (sock->ops)
+		err = sock->ops->listen(sock, backlog);
+	free_socket(sock);
+out:
+	return err;
 }
 
 void _close(struct socket *sock)
 {
-	/* If sock is waited on recv/send, we wake it up first! */
+	if (!sock)
+		return;
+	/*
+	 * Maybe _close() is called in interrupt signal handler,
+	 * in which case there is no method to notify app the interrupt.
+	 * If sock is waited on recv/accept, we wake it up first!
+	 */
 	wait_exit(&sock->sleep);
 	free_socket(sock);
+}
+
+int _connect(struct socket *sock, struct sock_addr *skaddr)
+{
+	int err = -1;
+	if (!sock || !skaddr)
+		goto out;
+	get_socket(sock);
+	if (sock->ops) {
+		err = sock->ops->connect(sock, skaddr);
+	}
+	free_socket(sock);
+out:
+	return err;
 }
 
 int _bind(struct socket *sock, struct sock_addr *skaddr)
 {
 	int err = -1;
-	if (!skaddr)
+	if (!sock || !skaddr)
 		goto out;
 	get_socket(sock);
 	if (sock->ops)
@@ -105,9 +126,29 @@ out:
 	return err;
 }
 
-struct socket *_accept(struct socket *sock)
+struct socket *_accept(struct socket *sock, struct sock_addr *skaddr)
 {
-	return NULL;
+	struct socket *newsock = NULL;
+	int err;
+	if (!sock)
+		goto out;
+	get_socket(sock);
+	/* alloc slave socket */
+	newsock = alloc_socket(sock->family, sock->type);
+	if (!newsock)
+		goto out_free;
+	newsock->ops = sock->ops;
+	/* real accepting process */
+	if (sock->ops)
+		err = sock->ops->accept(sock, newsock, skaddr);
+	if (err < 0) {
+		free(newsock);
+		newsock = NULL;
+	}
+out_free:
+	free_socket(sock);
+out:
+	return newsock;
 }
 
 int _send(struct socket *sock, void *buf, int size, struct sock_addr *skaddr)
@@ -126,11 +167,14 @@ out:
 struct pkbuf *_recv(struct socket *sock)
 {
 	struct pkbuf *pkb = NULL;
+	if (!sock)
+		goto out;
 	/* get reference for _close() safe */
 	get_socket(sock);
 	if (sock->ops)
 		pkb = sock->ops->recv(sock);
 	free_socket(sock);
+out:
 	return pkb;
 }
 

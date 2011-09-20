@@ -8,7 +8,7 @@
 
 extern void shell_master(char *);
 extern void *shell_worker(void *);
-extern void shell_int(void);
+extern void shell_init(void);
 
 /*
  * 0 timer

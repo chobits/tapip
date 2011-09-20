@@ -54,7 +54,7 @@ static _inline int __port_used(unsigned short port, struct hlist_head *head)
 	struct hlist_node *node;
 	struct sock *sk;
 	hlist_for_each_sock(sk, node, head)
-		if (sk->hash == port)
+		if (sk->sk_sport == htons(port))
 			return 1;
 	return 0;
 }
@@ -90,7 +90,7 @@ static _inline void udp_update_best(int hash)
 		if (udp_hash_slot(hash)->used < udp_best_slot()->used) {
 			udp_table.best_slot = hash;
 			/*
-			 * how to select udpate?
+			 * How to select udpate value?
 			 * 1. no change (we select this one)
 			 * 2. best_update += best->used - slot->used;
 			 */
@@ -110,7 +110,7 @@ static int udp_get_port_slow(void)
 			best_slot = i;
 		}
 	}
-	/* No find, table is full */
+	/* Not found, table is full */
 	if (best_slot == udp_table.best_slot)
 		return 0;
 	/* update best slot */
@@ -127,7 +127,7 @@ static unsigned short udp_get_port(void)
 	unsigned short port;
 
 	port = udp_get_best_port();
-	if (port < 0)
+	if (port == 0)
 		return udp_get_port_slow();
 
 	/* update hash table best slot */
@@ -157,7 +157,7 @@ static int udp_set_sport(struct sock *sk, unsigned short nport)
 	/*
 	 * Order cannot be reversed:
 	 *  1. check used port
-	 *  2. select a number defaultly and check it
+	 *  2. select a number automatically and check it
 	 */
 	if ((nport && port_used(ntohs(nport))) ||
 		(!nport && !(nport = udp_get_port())))
@@ -189,15 +189,14 @@ static void udp_unset_sport(struct sock *sk)
 static void udp_unhash(struct sock *sk)
 {
 	udp_unset_sport(sk);
-	/* Must check whether sk is hashed(bind)! */
-	if (!hlist_unhashed(&sk->hash_list))
-		hlist_del(&sk->hash_list);
+	sock_del_hash(sk);
 }
 
 /* If user donnot call bind(), this cannot be called! */
-static void udp_hash(struct sock *sk)
+static int udp_hash(struct sock *sk)
 {
-	hlist_add_head(&sk->hash_list, udp_hash_head(sk->hash));
+	sock_add_hash(sk, udp_hash_head(sk->hash));
+	return 0;
 }
 
 static int udp_send_pkb(struct sock *sk, struct pkbuf *pkb)
@@ -221,6 +220,7 @@ static int udp_init_pkb(struct sock *sk, struct pkbuf *pkb,
 	iphdr->ip_ttl = UDP_DEFAULT_TTL;
 	iphdr->ip_pro = sk->protocol;	/* IP_P_UDP */
 	iphdr->ip_dst = skaddr->dst_addr;
+	/* FIXME:use the sk->rt_dst */
 	if (rt_output(pkb) < 0)		/* fill ip src */
 		return -1;
 	/* fill udp */
@@ -241,8 +241,6 @@ static int udp_send_buf(struct sock *sk, void *buf, int size,
 {
 	struct sock_addr sk_addr;
 	struct pkbuf *pkb;
-	unsigned int dst = 0;
-	unsigned int dport = 0;
 
 	/* destination address check */
 	if (size <= 0 || size > UDP_MAX_BUFSZ)
@@ -260,8 +258,10 @@ static int udp_send_buf(struct sock *sk, void *buf, int size,
 		return -1;
 	/* udp packet send */
 	pkb = alloc_pkb(ETH_HRD_SZ + IP_HRD_SZ + UDP_HRD_SZ + size);
-	if (udp_init_pkb(sk, pkb, buf, size, &sk_addr) < 0)
+	if (udp_init_pkb(sk, pkb, buf, size, &sk_addr) < 0) {
+		free_pkb(pkb);
 		return -1;
+	}
 	if (sk->ops->send_pkb)
 		return sk->ops->send_pkb(sk, pkb);
 	else
@@ -285,11 +285,12 @@ struct sock *udp_lookup_sock(unsigned short nport)
 	struct hlist_head *head = udp_slot_head(ntohs(nport));
 	struct hlist_node *node;
 	struct sock *sk;
+	/* FIXME: lock for udp hash table */
 	if (hlist_empty(head))
 		return NULL;
 	hlist_for_each_sock(sk, node, head)
 		if (sk->sk_sport == nport)
-			return sk;
+			return get_sock(sk);
 	return NULL;
 }
 

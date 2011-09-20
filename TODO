@@ -1,18 +1,15 @@
-1. (done)
- Ping2 10.0.0.2
- one reply packet is dropped!
----
- pkb::pk_pro is not set!
-2.
+1.
  TCP protocol implementation
-3.
+---
+ implement tcp three-way handshake connection
+2.
  network debug tools:
   traceroute, arping, ss, route, arp, ip [...]
-4.
+3.
  In TOP1, l2 cannot receive its reply packet sometimes!
  Should we using a single thread to receive packet and
  another thread to parse it?
-5.
+4.
  Ping cause segment fault sometimes!
 ---
  This bug is caused by condition race of freed socket structure.
@@ -27,13 +24,13 @@
 
  But the final method is to make tty signal be sent to ping thread, which is
  left to do sometime.
-6.
+5.
  Add bridge programming, then we should not use brctl
  and can delete doc/brctl.sh
-7.
+6.
  test udp get port alogrithm
-8.
+7.
  multicast/broadcast address handle
-9.
+8.
  ip option handle
 

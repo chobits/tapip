@@ -105,11 +105,12 @@ int rt_output(struct pkbuf *pkb)
 	if (!rt) {
 		/* FIXME: icmp dest unreachable to localhost */
 		ipdbg("No route entry to "IPFMT, ipfmt(iphdr->ip_dst));
-		free_pkb(pkb);
 		return -1;
 	}
 	pkb->pk_rtdst = rt;
 	iphdr->ip_src = rt->rt_dev->net_ipaddr;
+	ipdbg("Find route entry from "IPFMT" to "IPFMT,
+			ipfmt(iphdr->ip_src), ipfmt(iphdr->ip_dst));
 	return 0;
 }
 

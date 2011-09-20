@@ -180,6 +180,7 @@ void *shell_worker(void *none)
 	}
 out:
 	dbg("shell worker exit");
+	return NULL;
 }
 
 static void parse_args(int argc, char **argv)

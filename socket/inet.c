@@ -3,16 +3,18 @@
 #include "netif.h"
 #include "ip.h"
 #include "udp.h"
+#include "tcp.h"
 #include "raw.h"
 #include "inet.h"
 #include "lib.h"
+#include "route.h"
 
 static struct inet_type inet_type_table[SOCK_MAX] = {
 	[0] = {},
 	[SOCK_STREAM] = {
 		.type = SOCK_STREAM,
 		.protocol = IP_P_TCP,
-//		.alloc_sock = tcp_alloc_sock,
+		.alloc_sock = tcp_alloc_sock,
 	},
 	[SOCK_DGRAM] = {
 		.type = SOCK_DGRAM,
@@ -26,7 +28,7 @@ static struct inet_type inet_type_table[SOCK_MAX] = {
 	}
 };
 
-int inet_socket(struct socket *sock, int protocol)
+static int inet_socket(struct socket *sock, int protocol)
 {
 	struct inet_type *inet;
 	struct sock *sk;
@@ -47,18 +49,16 @@ int inet_socket(struct socket *sock, int protocol)
 	sock->sk = get_sock(sk);
 	/* RawIp uses it for filtering packet. */
 	list_init(&sk->recv_queue);
-	list_init(&sk->listen_list);
 	hlist_node_init(&sk->hash_list);
 	sk->protocol = protocol;
 	sk->sock = sock;
-	sk->recv_wait = &sock->sleep;
-	/* add sock into hash table for [raw/udp/tcp/...]_in() */
+	/* only used by raw ip */
 	if (sk->hash && sk->ops->hash)
 		sk->ops->hash(sk);
 	return 0;
 }
 
-int inet_close(struct socket *sock)
+static int inet_close(struct socket *sock)
 {
 	struct sock *sk = sock->sk;
 	int err = -1;
@@ -75,17 +75,40 @@ int inet_close(struct socket *sock)
 	return err;
 }
 
-struct socket *inet_accept(struct socket *sock)
+static int inet_accept(struct socket *sock,
+		struct socket *newsock, struct sock_addr *skaddr)
 {
-	return 0;
+	struct sock *sk = sock->sk;
+	struct sock *newsk;
+	int err = -1;
+	if (!sk)
+		goto out;
+	newsk = sk->ops->accept(sk);
+	if (newsk) {
+		newsock->sk = get_sock(newsk);
+		if (skaddr) {
+			skaddr->src_addr = newsk->sk_daddr;
+			skaddr->src_port = newsk->sk_dport;
+		}
+		err = 0;
+	}
+out:
+	return err;
 }
 
-int inet_listen(struct socket *sock, int backlog)
+static int inet_listen(struct socket *sock, int backlog)
 {
-	return 0;
+	struct sock *sk = sock->sk;
+	int err = -1;
+
+	if (sock->type != SOCK_STREAM)
+		return -1;
+	if (sk)
+		err = sk->ops->listen(sk, backlog);
+	return err;
 }
 
-int inet_bind(struct socket *sock, struct sock_addr *skaddr)
+static int inet_bind(struct socket *sock, struct sock_addr *skaddr)
 {
 	struct sock *sk = sock->sk;
 	int err = -1;
@@ -120,22 +143,46 @@ err_out:
 	return err;
 }
 
-int inet_connect(struct socket *sock, struct sock_addr *skaddr)
+static int inet_connect(struct socket *sock, struct sock_addr *skaddr)
+{
+	struct sock *sk = sock->sk;
+	int err = -1;
+	/* sanity check */
+	if (!skaddr->dst_port || !skaddr->dst_addr)
+		goto out;
+	/* Not allow double connection */
+	if (sk->sk_dport)
+		goto out;
+	/* if not bind, we try auto bind */
+	if (!sk->sk_sport && sock_autobind(sk) < 0)
+		goto out;
+	/* ROUTE */
+	{
+		struct rtentry *rt = rt_lookup(skaddr->dst_addr);
+		if (!rt)
+			goto out;
+		sk->sk_dst = rt;
+		sk->sk_saddr = sk->sk_dst->rt_dev->net_ipaddr;
+	}
+	/* protocol must support its own connect */
+	if (sk->ops->connect)
+		err = sk->ops->connect(sk, skaddr);
+	/* if connect error happen, it will auto unbind */
+out:
+	return err;
+}
+
+static int inet_read(struct socket *sock, void *buf, int len)
 {
 	return 0;
 }
 
-int inet_read(struct socket *sock, void *buf, int len)
+static int inet_write(struct socket *sock, void *buf, int len)
 {
 	return 0;
 }
 
-int inet_write(struct socket *sock, void *buf, int len)
-{
-	return 0;
-}
-
-int inet_send(struct socket *sock, void *buf, int size,
+static int inet_send(struct socket *sock, void *buf, int size,
 			struct sock_addr *skaddr)
 {
 	struct sock *sk = sock->sk;
@@ -144,12 +191,16 @@ int inet_send(struct socket *sock, void *buf, int size,
 	return -1;
 }
 
-struct pkbuf *inet_recv(struct socket *sock)
+static struct pkbuf *inet_recv(struct socket *sock)
 {
 	struct sock *sk = sock->sk;
-	if (sk)
-		return sk->ops->recv(sock->sk);
-	return NULL;
+	struct pkbuf *pkb = NULL;
+	if (sk) {
+		sk->recv_wait = &sock->sleep;
+		pkb = sk->ops->recv(sock->sk);
+		sk->recv_wait = NULL;
+	}
+	return pkb;
 }
 
 struct socket_ops inet_ops = {
@@ -169,5 +220,6 @@ void inet_init(void)
 {
 	raw_init();
 	udp_init();
+	tcp_init();
 }
 

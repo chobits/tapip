@@ -1,9 +1,6 @@
-CC = gcc
-LD = ld
-CFLAGS = -I../include -Wall
-
 OBJS	=	ping.o		\
-		udp_test.o
+		udp_test.o	\
+		tcp_test.o
 
 all:app_obj.o
 app_obj.o:$(OBJS)
@@ -11,6 +8,8 @@ app_obj.o:$(OBJS)
 ping.o:ping.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 udp_test.o:udp_test.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+tcp_test.o:tcp_test.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:

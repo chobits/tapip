@@ -17,6 +17,8 @@ static void udp_recv(struct pkbuf *pkb, struct ip *iphdr, struct udp *udphdr)
 	/* FIFO receive queue */
 	list_add_tail(&pkb->pk_list, &sk->recv_queue);
 	sk->ops->recv_notify(sk);
+	/* We have handled the input packet with sock, so release it */
+	free_sock(sk);
 	return;
 drop:
 	free_pkb(pkb);

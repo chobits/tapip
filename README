@@ -13,3 +13,6 @@
   It can also do some network test: arp snooping, proxy, and NAT!
   I think the most important is that tapip helps me learn TCP/IP, and
    understand linux TCP/IP stack.
+
++ How to run?
+  See doc/net_topology, and select a script from doc/test

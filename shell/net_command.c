@@ -13,7 +13,7 @@ unsigned int net_debug = 0;
 
 void usage(void)
 {
-	ferr("Usage: debug [-c|-n] (dev|l2|arp|ip|icmp|udp|tcp)+\n");
+	ferr("Usage: debug [-c|-n] (dev|l2|arp|ip|icmp|udp|tcp|tcpstate)+\n");
 }
 
 void signal_wait(int signum)
@@ -49,6 +49,8 @@ void netdebug(int argc, char **argv)
 			debug |= NET_DEBUG_UDP;
 		} else if (strcmp(argv[argc], "tcp") == 0) {
 			debug |= NET_DEBUG_TCP;
+		} else if (strcmp(argv[argc], "tcpstate") == 0) {
+			debug |= NET_DEBUG_TCPSTATE;
 		} else if (strcmp(argv[argc], "all") == 0) {
 			debug |= NET_DEBUG_ALL;
 		} else {

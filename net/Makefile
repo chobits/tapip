@@ -1,7 +1,3 @@
-CC = gcc
-LD = ld
-CFLAGS = -I../include -Wall
-
 OBJS	=	net.o		\
 		netdev.o	\
 		veth.o		\

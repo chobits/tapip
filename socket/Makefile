@@ -1,7 +1,3 @@
-CC = gcc
-LD = ld
-CFLAGS = -I../include -Wall
-
 OBJS	= socket.o sock.o raw_sock.o inet.o
 
 all:socket_obj.o

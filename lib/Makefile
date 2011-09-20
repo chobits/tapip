@@ -1,7 +1,3 @@
-CC = gcc
-LD = ld
-CFLAGS = -I../include -Wall
-
 OBJS	=	lib.o checksum.o
 
 all:lib_obj.o

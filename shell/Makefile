@@ -1,7 +1,3 @@
-CC = gcc
-LD = ld
-CFLAGS = -I../include -Wall
-
 OBJS	=	main.o		\
 		net_command.o	\
 		ping_command.o	\

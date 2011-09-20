@@ -101,6 +101,24 @@ static int parse_args(int argc, char **argv)
 	return 0;
 }
 
+static void close_socket(void)
+{
+	struct socket *tmp;
+	if (sock) {
+		/*
+		 * set sock to NULL before close it
+		 * Otherwise shell thread close it when I enter Ctrl + C to
+		 * send an interrupt signal to main thread,
+		 * and then ping thread will wake up to close it also,
+		 * which cause a segment fault for double freeing.
+		 * FIXME: send tty signal to ping thread
+		 */
+		tmp = sock;
+		sock = NULL;
+		_close(tmp);
+	}
+}
+
 static void send_packet(void)
 {
 	if (!buf)
@@ -134,8 +152,14 @@ static void send_packet(void)
 static void sigalrm(int num)
 {
 	send_packet();
-	if (!finite || --count > 0)
+	if (!finite || --count > 0) {
 		alarm(1);
+	} else if (count == 0) {
+		alarm(1);
+		count--;
+	} else {
+		close_socket();
+	}
 }
 
 static void ping_stat(void)
@@ -150,20 +174,7 @@ static void sigint(int num)
 {
 	alarm(0);
 	/* if we dont close socket, then recv still block socket!! */
-	if (sock) {
-		/*
-		 * set sock to NULL before close it
-		 * Otherwise shell thread close it when I enter Ctrl + C to
-		 * send an interrupt signal to main thread,
-		 * and then ping thread will wake up to close it also,
-		 * which cause a segment fault for double freeing.
-		 * FIXME: send tty signal to ping thread
-		 */
-		struct socket *tmp = sock;
-		sock = NULL;
-		_close(tmp);
-	}
-	ping_stat();
+	close_socket();
 }
 
 static void recv_packet(void)
@@ -190,8 +201,6 @@ static void recv_packet(void)
 		}
 		free_pkb(pkb);
 	}
-	if (finite && recv <= 0)
-		ping_stat();
 }
 
 void ping(int argc, char **argv)
@@ -221,11 +230,8 @@ void ping(int argc, char **argv)
 	recv_packet();
 
 	alarm(0);
-	if (sock) {
-		struct socket *tmp = sock;
-		sock = NULL;
-		_close(tmp);
-	}
+	close_socket();
 	if (buf)
 		free(buf);
+	ping_stat();
 }

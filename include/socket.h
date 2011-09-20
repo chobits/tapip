@@ -5,6 +5,7 @@
 
 enum socket_state {
 	SS_UNCONNECTED = 1,
+	SS_BIND,
 	SS_LISTEN,
 	SS_CONNECTING,
 	SS_CONNECTED,
@@ -28,7 +29,7 @@ struct sock_addr;
 struct socket_ops {
 	int (*socket)(struct socket *, int);
 	int (*close)(struct socket *);
-	struct socket *(*accept)(struct socket *);
+	int (*accept)(struct socket *, struct socket *, struct sock_addr *);
 	int (*listen)(struct socket *, int);
 	int (*bind)(struct socket *, struct sock_addr *);
 	int (*connect)(struct socket *, struct sock_addr *);
@@ -52,9 +53,10 @@ extern struct socket *_socket(int family, int type, int protocol);
 extern int _listen(struct socket *sock, int backlog);
 extern void _close(struct socket *sock);
 extern int _bind(struct socket *sock, struct sock_addr *sk_addr);
-extern struct socket *_accept(struct socket *sock);
+extern struct socket *_accept(struct socket *, struct sock_addr *);
 extern int _send(struct socket *sock, void *buf, int size,
 					struct sock_addr *skaddr);
+extern int _connect(struct socket *sock, struct sock_addr *sk_addr);
 extern struct pkbuf *_recv(struct socket *sock);
 extern void socket_init(void);
 

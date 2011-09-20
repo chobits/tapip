@@ -3,8 +3,6 @@
 
 //#define ICMP_EXC_FRAGTIME_TEST
 
-#define CONFIG_TOP2
-
 /* see doc/brcfg.sh & doc/net_topology # TOP1 */
 #ifdef CONFIG_TOP1
 #define FAKE_TAP_ADDR 0x00000000	/* 0.0.0.0 */

@@ -58,18 +58,6 @@ do {\
 		dbg(red(arp)" "fmt, ##args);\
 } while (0)
 
-#define udpdbg(fmt, args...)\
-do {\
-	if (net_debug & NET_DEBUG_UDP)\
-		dbg(purple(udp)" "fmt, ##args);\
-} while (0)
-
-#define tcpdbg(fmt, args...)\
-do {\
-	if (net_debug & NET_DEBUG_TCP)\
-		dbg(fmt, ##args);\
-} while (0)
-
 #define ipdbg(fmt, args...)\
 do {\
 	if (net_debug & NET_DEBUG_IP)\
@@ -82,14 +70,33 @@ do {\
 		dbg(purple(icmp)" "fmt, ##args);\
 } while (0)
 
-#define NET_DEBUG_DEV	0x00000001
-#define NET_DEBUG_L2	0x00000002
-#define NET_DEBUG_ARP	0x00000004
-#define NET_DEBUG_IP	0x00000008
-#define NET_DEBUG_ICMP	0x00000010
-#define NET_DEBUG_UDP	0x00000020
-#define NET_DEBUG_TCP	0x00000040
-#define NET_DEBUG_ALL	0xffffffff
+#define udpdbg(fmt, args...)\
+do {\
+	if (net_debug & NET_DEBUG_UDP)\
+		dbg(purple(udp)" "fmt, ##args);\
+} while (0)
+
+#define tcpdbg(fmt, args...)\
+do {\
+	if (net_debug & NET_DEBUG_TCP)\
+		dbg(purple(tcp)" "fmt, ##args);\
+} while (0)
+
+#define tcpsdbg(fmt, args...)\
+do {\
+	if (net_debug & NET_DEBUG_TCPSTATE)\
+		dbg(green(tcpstate)" "fmt, ##args);\
+} while (0)
+
+#define NET_DEBUG_DEV		0x00000001
+#define NET_DEBUG_L2		0x00000002
+#define NET_DEBUG_ARP		0x00000004
+#define NET_DEBUG_IP		0x00000008
+#define NET_DEBUG_ICMP		0x00000010
+#define NET_DEBUG_UDP		0x00000020
+#define NET_DEBUG_TCP		0x00000040
+#define NET_DEBUG_TCPSTATE	0x00000080
+#define NET_DEBUG_ALL		0xffffffff
 
 extern unsigned int net_debug;
 extern void *xmalloc(int);
@@ -104,4 +111,10 @@ extern unsigned short tcp_chksum(unsigned int src, unsigned dst,
 		unsigned short len, unsigned short *data);
 extern unsigned short udp_chksum(unsigned int src, unsigned int dst,
 		unsigned short len, unsigned short *data);
+struct ip;
+struct udp;
+struct tcp;
+extern void udp_set_checksum(struct ip *, struct udp *);
+extern void tcp_set_checksum(struct ip *, struct tcp *);
+
 #endif	/* lib.h */

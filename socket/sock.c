@@ -11,10 +11,11 @@ void sock_add_hash(struct sock *sk, struct hlist_head *head)
 
 void sock_del_hash(struct sock *sk)
 {
-	free_sock(sk);
 	/* Must check whether sk is hashed! */
-	if (!hlist_unhashed(&sk->hash_list))
+	if (!hlist_unhashed(&sk->hash_list)) {
 		hlist_del(&sk->hash_list);
+		free_sock(sk);
+	}
 }
 
 struct sock *get_sock(struct sock *sk)
@@ -32,7 +33,7 @@ void free_sock(struct sock *sk)
 /* common sock ops */
 void sock_recv_notify(struct sock *sk)
 {
-	if (!list_empty(&sk->recv_queue))
+	if (!list_empty(&sk->recv_queue) && sk->recv_wait)
 		wake_up(sk->recv_wait);
 }
 
@@ -56,7 +57,6 @@ struct pkbuf *sock_recv_pkb(struct sock *sk)
 int sock_close(struct sock *sk)
 {
 	struct pkbuf *pkb;
-	list_del_init(&sk->listen_list);
 	sk->recv_wait = NULL;
 	/* stop receiving packet */
 	if (sk->ops->unhash)

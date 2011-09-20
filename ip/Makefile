@@ -1,7 +1,3 @@
-CC = gcc
-LD = ld
-CFLAGS = -I../include -Wall
-
 OBJS	=	ip.o		\
 		ip_frag.o	\
 		icmp.o		\

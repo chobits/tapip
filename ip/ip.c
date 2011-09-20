@@ -4,6 +4,7 @@
 #include "ip.h"
 #include "raw.h"
 #include "udp.h"
+#include "tcp.h"
 #include "icmp.h"
 #include "route.h"
 
@@ -42,8 +43,7 @@ void ip_recv_local(struct pkbuf *pkb)
 		icmp_in(pkb);
 		break;
 	case IP_P_TCP:
-		free_pkb(pkb);
-		ipdbg("tcp is not supported currently!");
+		tcp_in(pkb);
 		break;
 	case IP_P_UDP:
 		udp_in(pkb);
@@ -62,6 +62,7 @@ void ip_send_dev(struct netdev *dev, struct pkbuf *pkb)
 	struct rtentry *rt = pkb->pk_rtdst;
 
 	if (rt->rt_flags & RT_LOCALHOST) {
+		ipdbg("To loopback");
 		netdev_tx(dev, pkb, pkb->pk_len - ETH_HRD_SZ,
 					ETH_P_IP, dev->net_hwaddr);
 		return;
@@ -100,8 +101,10 @@ void ip_send_out(struct pkbuf *pkb)
 {
 	struct ip *iphdr = pkb2ip(pkb);
 	pkb->pk_pro = ETH_P_IP;
-	if (!pkb->pk_rtdst && rt_output(pkb) < 0)
+	if (!pkb->pk_rtdst && rt_output(pkb) < 0) {
+		free_pkb(pkb);
 		return;
+	}
 	ip_setchksum(iphdr);
 	ipdbg(IPFMT " -> " IPFMT "(%d/%d bytes)",
 			ipfmt(iphdr->ip_src), ipfmt(iphdr->ip_dst),

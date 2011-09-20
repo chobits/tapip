@@ -1,7 +1,3 @@
-CC = gcc
-LD = ld
-CFLAGS = -I../include
-
 OBJS	=	udp.o udp_sock.o
 
 all:udp_obj.o
