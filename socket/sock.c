@@ -3,6 +3,9 @@
 #include "lib.h"
 #include "list.h"
 
+int alloc_socks = 0;
+int free_socks = 0;
+
 void sock_add_hash(struct sock *sk, struct hlist_head *head)
 {
 	get_sock(sk);
@@ -26,8 +29,10 @@ struct sock *get_sock(struct sock *sk)
 
 void free_sock(struct sock *sk)
 {
-	if (--sk->refcnt <= 0)
+	if (--sk->refcnt <= 0) {
+		free_socks++;
 		free(sk);
+	}
 }
 
 /* common sock ops */

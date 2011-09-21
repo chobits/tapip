@@ -128,6 +128,7 @@ static void tcp_synsent(struct pkbuf *pkb, struct tcp_segment *seg,
 		if (tcphdr->ack) {
 			/* connect closed port */
 			tcpsdbg("Error:connection reset");
+			tcpsdbg("State to CLOSED");
 			tsk->state = TCP_CLOSED;
 			if (tsk->wait_connect)
 				wake_up(tsk->wait_connect);
@@ -147,6 +148,7 @@ static void tcp_synsent(struct pkbuf *pkb, struct tcp_segment *seg,
 			tsk->snd_una = seg->ack;	/* snd_una: iss -> iss+1 */
 		/* delete retransmission queue which waits to be acknowledged */
 		if (tsk->snd_una > tsk->iss) {	/* rcv.ack = snd.syn.seq+1 */
+			tcpsdbg("State to ESTABLISHED");
 			tsk->state = TCP_ESTABLISHED;
 			/* RFC 1122: error corrections of RFC 793 */
 			tsk->snd_wnd = seg->wnd;
@@ -216,6 +218,7 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 {
 	struct tcp_sock *tsk = tcpsk(sk);
 	struct tcp *tcphdr = seg->tcphdr;
+
 	if (!tsk || tsk->state == TCP_CLOSED)
 		return tcp_closed(tsk, pkb, seg);
 	if (tsk->state == TCP_LISTEN)
@@ -265,6 +268,7 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 		switch (tsk->state) {
 		case TCP_SYN_RECV:
 			if (tsk->parent) {	/* passive open */
+				tcpsdbg("State to LISTEN");
 				tsk->state = TCP_LISTEN;
 			} else {
 				/* signal user "connection refused" */
@@ -358,6 +362,7 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 			tsk->snd_wnd = seg->wnd;
 			tsk->snd_wl1 = seg->seq;
 			tsk->snd_wl2 = seg->ack;
+			tcpsdbg("State to ESTABLISHED");
 			tsk->state = TCP_ESTABLISHED;
 		} else {
 			tcp_send_reset(tsk, seg);
@@ -365,11 +370,31 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 		}
 		break;
 	case TCP_ESTABLISHED:
+	case TCP_CLOSE_WAIT:
+	case TCP_LAST_ACK:
+	case TCP_FIN_WAIT1:
+	case TCP_CLOSING:
+		tcpsdbg("SND.UNA %u < SEG.ACK %u <= SND.NXT %u",
+				tsk->snd_una, seg->ack, tsk->snd_nxt);
 		if (tsk->snd_una < seg->ack && seg->ack <= tsk->snd_nxt) {
 			tsk->snd_una = seg->ack;
 			/* remove any segments on the restransmission
 			 * queue which are thereby entirely acknowledged
 			 * */
+			if (tsk->state == TCP_FIN_WAIT1) {
+				tcpsdbg("State to FIN-WAIT-2");
+				tsk->state = TCP_FIN_WAIT2;
+			} else if (tsk->state == TCP_CLOSING) {
+				tcpsdbg("State to TIME-WAIT");
+				tsk->state = TCP_TIME_WAIT;
+				/* FIXME: 2MSL timer */
+				goto drop;
+			} else if (tsk->state == TCP_LAST_ACK) {
+				tcpsdbg("State to CLOSED(delete TCB)");
+				tsk->state = TCP_CLOSED;
+				free_sock(&tsk->sk);
+				goto drop;
+			}
 		} else if (seg->ack > tsk->snd_nxt) {		/* something not yet sent */
 			/* reply ACK ack = ? */
 			goto drop;
@@ -382,6 +407,11 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 			 * -Yes for linux
 			 * +Yes for tapip, I think the segment, whose ACK is a duplicate,
 			 *  maybe have useful data text or other control bits.
+			 *
+			 * After three-way handshake connection is established, then
+			 * SND.UNA == SND.NXT, which means next remote packet ACK is
+			 * always duplicate. Although this happens frequently, we should
+			 * not view it as an error.
 			 */
 		}
 		if ((tsk->snd_una <= seg->ack && seg->ack <= tsk->snd_nxt) &&
@@ -392,35 +422,11 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 			tsk->snd_wl2 = seg->ack;
 		}
 		break;
-	case TCP_FIN_WAIT1:
-	/*
-          In addition to the processing for the ESTABLISHED state, if
-          our FIN is now acknowledged then enter FIN-WAIT-2 and continue
-          processing in that state.
-	 */
-		break;
 	case TCP_FIN_WAIT2:
 	/*
           In addition to the processing for the ESTABLISHED state, if
           the retransmission queue is empty, the user's CLOSE can be
-          acknowledged ("ok") but do not delete the TCB.
-	 */
-		break;
-	case TCP_CLOSING:
-	/*
-          In addition to the processing for the ESTABLISHED state, if
-          the ACK acknowledges our FIN then enter the TIME-WAIT state,
-          otherwise ignore the segment.
-	 */
-		break;
-	case TCP_CLOSE_WAIT:
-		/* Do the same processing as for the ESTABLISHED state. */
-		break;
-	case TCP_LAST_ACK:
-	/*
-          The only thing that can arrive in this state is an
-          acknowledgment of our FIN.  If our FIN is now acknowledged,
-          delete the TCB, enter the CLOSED state, and return.
+          acknowledged ("ok") but do not delete the TCB. (wait FIN)
 	 */
 		break;
 	case TCP_TIME_WAIT:
@@ -431,6 +437,7 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 	 */
 		break;
 	}
+
 	/* sixth check the URG bit */
 	tcpsdbg("6. check urg");
 	if (tcphdr->urg) {
@@ -480,26 +487,27 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 	/* eighth check the FIN bit */
 	tcpsdbg("8. check fin");
 	if (tcphdr->fin) {
-		/* singal the user "connection closing" */
-		/* return any pending RECEIVEs with same message */
-		/* advance rcv.nxt over fin */
-		/* FIN implies PUSH for any segment text not yet delivered to the
-		   user. */
-		/* send ACK for FIN */
-
 		switch (tsk->state) {
 		case TCP_SYN_RECV:
+			/* SYN-RECV means remote->local connection is established */
 		case TCP_ESTABLISHED:
-			tsk->state = TCP_CLOSE_WAIT;
+			tcpsdbg("State to CLOSE-WAIT");
+			tsk->state = TCP_CLOSE_WAIT;	/* waiting user to close */
 			break;
 		case TCP_FIN_WAIT1:
-			if (0/* has been ACKed in fifth check */) {
-				tsk->state = TCP_TIME_WAIT;
-				/* start the time-wait timer */
-				/* turn off the other timers */
-			} else {
-				tsk->state = TCP_CLOSING;
-			}
+			/*
+			 * Can be here?
+			 * No.
+			 *
+			 * Segment has no ACK bit with only FIN bit will
+			 * be dropped in fifth check.
+			 *
+			 * If ACK for our first FIN is in this segment,
+			 * state has been set to FIN-WAIT2
+			 */
+			tcpsdbg("<ERROR> cannot be here!");
+			tcpsdbg("State to CLOSING");
+			tsk->state = TCP_CLOSING;
 			break;
 		case TCP_CLOSE_WAIT:
 			/* Remain in the CLOSE-WAIT state */
@@ -511,13 +519,23 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 			/* Remain in the LAST-ACK state */
 			break;
 		case TCP_TIME_WAIT:
-			/* Remain in the TIME-WAIT -ACK state */
+			/* Remain in the TIME-WAIT state */
 			/* restart the 2 MSL time-wait timeout */
 			break;
 		case TCP_FIN_WAIT2:
+			/* FIXME: start 2MSL timer, turn off the other timers. */
+			tcpsdbg("State to TIME-WAIT");
+			tsk->state = TCP_TIME_WAIT;
 			break;
 		}
-
+		/* singal the user "connection closing" */
+		/* return any pending RECEIVEs with same message */
+		/* advance rcv.nxt over fin */
+		tsk->rcv_nxt = seg->seq + 1;
+		/* send ACK for FIN */
+		tcp_send_ack(tsk, seg);
+		/* FIN implies PUSH for any segment text not yet delivered to the
+		   user. */
 	}
 drop:
 	free_pkb(pkb);

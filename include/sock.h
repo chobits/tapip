@@ -71,4 +71,7 @@ extern struct pkbuf *sock_recv_pkb(struct sock *sk);
 extern int sock_close(struct sock *sk);
 extern int sock_autobind(struct sock *);
 
+extern int alloc_socks;
+extern int free_socks;
+
 #endif	/* sock.h */

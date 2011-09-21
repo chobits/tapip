@@ -316,6 +316,7 @@ struct sock *udp_alloc_sock(int protocol)
 	if (protocol && protocol != IP_P_UDP)
 		return NULL;
 	udp_sk = xmalloc(sizeof(*udp_sk));
+	alloc_socks++;
 	memset(udp_sk, 0x0, sizeof(*udp_sk));
 	udp_sk->sk.ops = &udp_ops;
 	udp_id++;

@@ -8,6 +8,7 @@
 #include "lib.h"
 #include "route.h"
 #include "netcfg.h"
+#include "sock.h"
 
 unsigned int net_debug = 0;
 
@@ -120,10 +121,14 @@ void ifconfig(int argc, char **argv)
 #endif
 }
 
-void pkb(int argc, char **argv)
+void stat(int argc, char **argv)
 {
 	printf("[pkbuf memory information]\n"
 		" alloced pkbs: %d\n"
 		" free pkbs:    %d\n",
 		alloc_pkbs, free_pkbs);
+	printf("[sock memory information]\n"
+		" alloced socks: %d\n"
+		" free socks:    %d\n",
+		alloc_socks, free_socks);
 }

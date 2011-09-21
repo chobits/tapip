@@ -127,6 +127,7 @@ void tcp_send_ack(struct tcp_sock *tsk, struct tcp_segment *seg)
 	otcp->seq = htonl(tsk->snd_nxt);
 	otcp->ackn = htonl(tsk->rcv_nxt);
 	otcp->ack = 1;
+	otcp->window = 5320;	/* if no windown, the remote will not send fin to us */
 	tcpdbg("send ACK(%u) to "IPFMT":%d", ntohl(otcp->ackn),
 			ipfmt(seg->iphdr->ip_src), ntohs(otcp->dst));
 	tcp_send_out(tsk, opkb, seg);
@@ -157,6 +158,7 @@ void tcp_send_synack(struct tcp_sock *tsk, struct tcp_segment *seg)
 	otcp->ackn = htonl(tsk->rcv_nxt);
 	otcp->syn = 1;
 	otcp->ack = 1;
+	otcp->window = 5320;	/* if no windown, the remote will not send fin to us */
 	tcpdbg("send SYN(%u)/ACK(%u) to "IPFMT":%d",
 			ntohl(otcp->seq), ntohl(otcp->ackn),
 			ipfmt(seg->iphdr->ip_dst), ntohs(otcp->dst));
@@ -183,4 +185,32 @@ void tcp_send_syn(struct tcp_sock *tsk, struct tcp_segment *seg)
 	tcpdbg("send SYN(%u) to "IPFMT":%d", ntohl(otcp->seq),
 			ipfmt(tsk->sk.sk_daddr), ntohs(otcp->dst));
 	tcp_send_out(tsk, opkb, seg);
+}
+
+void tcp_send_fin(struct tcp_sock *tsk)
+{
+	struct tcp *otcp;
+	struct pkbuf *opkb;
+
+	opkb = alloc_pkb(ETH_HRD_SZ + IP_HRD_SZ + TCP_HRD_SZ);
+	/* fill tcp head */
+	otcp = (struct tcp *)pkb2ip(opkb)->ip_data;
+	memset(otcp, 0x0, TCP_HRD_SZ);
+	otcp->src = tsk->sk.sk_sport;
+	otcp->dst = tsk->sk.sk_dport;
+	otcp->doff = TCP_HRD_DOFF;
+	otcp->seq = htonl(tsk->snd_nxt);
+	otcp->window = 5320;	/* if no windown, the remote will not send fin to us */
+	otcp->fin = 1;
+	/*
+	 * Should we send an ACK?
+	 * Yes, tcp stack will drop packet if it has no ACK bit
+	 * according to RFC 793 #SEGMENT RECEIVE
+	 */
+	otcp->ackn = htonl(tsk->rcv_nxt);
+	otcp->ack = 1;
+	tcpdbg("send FIN(%u)/ACK(%u) to "IPFMT":%d",
+			ntohl(otcp->seq), ntohl(otcp->ackn),
+			ipfmt(tsk->sk.sk_daddr), ntohs(otcp->dst));
+	tcp_send_out(tsk, opkb, NULL);
 }

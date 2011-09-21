@@ -102,6 +102,8 @@ out:	/* close and out */
 		sock = NULL;
 	}
 	if (csock) {
+		sleep(10);
+		printf("close client");
 		_close(csock);
 		csock = NULL;
 	}

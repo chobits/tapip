@@ -149,6 +149,7 @@ extern void tcp_send_reset(struct tcp_sock *tsk, struct tcp_segment *seg);
 extern void tcp_send_synack(struct tcp_sock *tsk, struct tcp_segment *seg);
 extern void tcp_send_ack(struct tcp_sock *tsk, struct tcp_segment *seg);
 extern void tcp_send_syn(struct tcp_sock *tsk, struct tcp_segment *seg);
+extern void tcp_send_fin(struct tcp_sock *tsk);
 extern unsigned int alloc_new_iss(void);
 extern int tcp_id;
 #define for_each_tcp_sock(tsk, node, head)\

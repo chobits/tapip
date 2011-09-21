@@ -307,9 +307,14 @@ static int tcp_close(struct sock *sk)
 	case TCP_SYN_SENT:
 		break;
 	case TCP_ESTABLISHED:
-		if (sk->ops->unhash)
-			sk->ops->unhash(sk);
-		tcp_unbhash(tsk);
+		tsk->state = TCP_FIN_WAIT1;
+		tcp_send_fin(tsk);
+		tsk->snd_nxt++;
+		break;
+	case TCP_CLOSE_WAIT:
+		tsk->state = TCP_LAST_ACK;
+		tcp_send_fin(tsk);
+		tsk->snd_nxt++;
 		break;
 	}
 	return 0;
@@ -343,6 +348,7 @@ struct sock *tcp_alloc_sock(int protocol)
 	if (protocol && protocol != IP_P_TCP)
 		return NULL;
 	tsk = xmalloc(sizeof(*tsk));
+	alloc_socks++;
 	memset(tsk, 0x0, sizeof(*tsk));
 	tsk->sk.ops = &tcp_ops;
 	tsk->state = TCP_CLOSED;

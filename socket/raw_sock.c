@@ -87,6 +87,7 @@ struct sock *raw_alloc_sock(int protocol)
 	if (protocol == IP_P_IP)
 		return NULL;
 	raw_sk = xmalloc(sizeof(*raw_sk));
+	alloc_socks++;
 	memset(raw_sk, 0x0, sizeof(*raw_sk));
 	raw_sk->sk.ops = &raw_ops;
 	raw_sk->sk.hash = protocol;	/* for raw_hash() */

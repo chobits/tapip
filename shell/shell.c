@@ -14,7 +14,7 @@ static void builtin_clear(int argc, char **argv);
 extern void arpcache(int, char **);
 extern void netdebug(int, char **);
 extern void ifconfig(int, char **);
-extern void pkb(int, char **);
+extern void stat(int, char **);
 extern void route(int, char **);
 extern void ping(int, char **);
 extern void ping2(int, char **);
@@ -70,7 +70,7 @@ static struct command cmds[] = {
 	{ 0, 1, arpcache, "arpcache", "see arp cache" },
 	{ 0, 1, route, "route", "show / manipulate the IP routing table" },
 	{ 0, 1, ifconfig, "ifconfig", "configure a network interface" },
-	{ 0, 1, pkb, "pkb", "display pkb information" },
+	{ 0, 1, stat, "stat", "display pkb/sock information" },
 	/* new thread command */
 	{ 1, CMD_NONUM, ping, "ping", "ping [OPTIONS] ipaddr" },
 	{ 1, CMD_NONUM, udp_test, "udp_test", "test udp recv and send" },
