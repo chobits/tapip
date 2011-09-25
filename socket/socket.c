@@ -41,8 +41,7 @@ static struct socket* get_socket(struct socket *sock)
 static struct socket *alloc_socket(int family, int type)
 {
 	struct socket *sock;
-	sock = xmalloc(sizeof(*sock));
-	memset(sock, 0x0, sizeof(*sock));
+	sock = xzalloc(sizeof(*sock));
 	sock->state = SS_UNCONNECTED;
 	sock->family = family;
 	sock->type = type;

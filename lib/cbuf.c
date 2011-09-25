@@ -18,8 +18,7 @@ void free_cbuf(struct cbuf *cbuf)
 struct cbuf *alloc_cbuf(int size)
 {
 	struct cbuf *cbuf;
-	cbuf = xmalloc(sizeof(*cbuf) + size);
-	memset(cbuf->buf, 0x0, size);
+	cbuf = xzalloc(sizeof(*cbuf) + size);
 	cbuf->head = cbuf->tail = 0;
 	cbuf->size = size;
 	alloc_cbufs++;

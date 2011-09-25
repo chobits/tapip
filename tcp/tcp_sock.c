@@ -415,9 +415,8 @@ struct sock *tcp_alloc_sock(int protocol)
 	struct tcp_sock *tsk;
 	if (protocol && protocol != IP_P_TCP)
 		return NULL;
-	tsk = xmalloc(sizeof(*tsk));
+	tsk = xzalloc(sizeof(*tsk));
 	alloc_socks++;
-	memset(tsk, 0x0, sizeof(*tsk));
 	tsk->sk.ops = &tcp_ops;
 	tsk->state = TCP_CLOSED;
 	tsk->rcv_wnd = TCP_DEFAULT_WINDOW;

@@ -21,8 +21,7 @@ extern void veth_poll(void);
 struct netdev *netdev_alloc(char *devstr, struct netdev_ops *netops)
 {
 	struct netdev *dev;
-	dev = xmalloc(sizeof(*dev));
-	memset(dev, 0x0, sizeof(*dev));
+	dev = xzalloc(sizeof(*dev));
 	/* add into localhost net device list */
 	list_add_tail(&dev->net_list, &net_devices);
 	/* set name */
