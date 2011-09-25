@@ -1,8 +1,6 @@
 #ifndef __NETCFG_H
 #define __NETCFG_H
 
-//#define ICMP_EXC_FRAGTIME_TEST
-
 /* see doc/brcfg.sh & doc/net_topology # TOP1 */
 #ifdef CONFIG_TOP1
 #define FAKE_TAP_ADDR 0x00000000	/* 0.0.0.0 */

@@ -1,8 +1,6 @@
 #ifndef __WAIT_H
 #define __WAIT_H
 
-//#define WAIT_DEBUG
-
 #include "lib.h"
 #include "compile.h"
 #include <pthread.h>

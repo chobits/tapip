@@ -1,7 +1,13 @@
 1.
  TCP protocol implementation
+ not implemented:
+  timer
+  packet retransmission
 ---
- implement tcp three-way handshake connection
+ implemented:
+  tcp three-way handshake connection
+  tcp connection terminal
+  tcp data receiving and sending
 2.
  network debug tools:
   traceroute, arping, ss, route, arp, ip [...]
@@ -17,7 +23,8 @@
  ping thread, then _close()->free_socket() will free socket structure,
  at the same time ping thread will return from _recv(), which is waken up
  by _close()->wait_exit().
- ping thread also call _close() to socket structure, which cause double free to socket!
+ ping thread also call _close() to socket structure, which cause double
+ free to socket!
 
  I set sock to NULL before free it, so ping thread will not free it again!
  Another method is set a mutex to sock.

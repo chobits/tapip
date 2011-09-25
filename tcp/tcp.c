@@ -41,7 +41,9 @@ static char *tcp_state_string(struct tcp *tcphdr)
 static void tcp_segment_init(struct tcp_segment *seg, struct ip *iphdr, struct tcp *tcphdr)
 {
 	seg->seq = ntohl(tcphdr->seq);
-	seg->len = ipdlen(iphdr) - tcphlen(tcphdr) + tcphdr->syn + tcphdr->fin;
+	seg->dlen = ipdlen(iphdr) - tcphlen(tcphdr);
+	seg->len = seg->dlen + tcphdr->syn + tcphdr->fin;
+	seg->text = tcptext(tcphdr);
 	/* if len is 0, fix lastseq to seq */
 	seg->lastseq = seg->len ? (seg->seq + seg->len - 1) : seg->seq;
 	seg->ack = tcphdr->ack ? ntohl(tcphdr->ackn) : 0;
@@ -51,16 +53,24 @@ static void tcp_segment_init(struct tcp_segment *seg, struct ip *iphdr, struct t
 	seg->prc = 0;
 	seg->iphdr = iphdr;
 	seg->tcphdr = tcphdr;
+
+	tcpdbg("from "IPFMT":%d" " to " IPFMT ":%d"
+		"\tseq:%u(%d:%d) ack:%u %s",
+			ipfmt(iphdr->ip_src), ntohs(tcphdr->src),
+			ipfmt(iphdr->ip_dst), ntohs(tcphdr->dst),
+			ntohl(tcphdr->seq), seg->dlen, seg->len,
+			ntohl(tcphdr->ackn), tcp_state_string(tcphdr));
 }
 
 static void tcp_recv(struct pkbuf *pkb, struct ip *iphdr, struct tcp *tcphdr)
 {
 	struct tcp_segment seg;
 	struct sock *sk;
+
+	tcp_segment_init(&seg, iphdr, tcphdr);
 	/* Should we use net device to match a connection? */
 	sk = tcp_lookup_sock(iphdr->ip_src, iphdr->ip_dst,
 				tcphdr->src, tcphdr->dst);
-	tcp_segment_init(&seg, iphdr, tcphdr);
 	tcp_process(pkb, &seg, sk);
 	if (sk)
 		free_sock(sk);
@@ -82,12 +92,6 @@ void tcp_in(struct pkbuf *pkb)
 		tcpdbg("tcp packet checksum corrupts");
 		goto drop_pkb;
 	}
-	tcpdbg("from "IPFMT":%d" " to " IPFMT ":%d"
-		"\tseq:%u ack:%u %s",
-			ipfmt(iphdr->ip_src), ntohs(tcphdr->src),
-			ipfmt(iphdr->ip_dst), ntohs(tcphdr->dst),
-			ntohl(tcphdr->seq), ntohl(tcphdr->ackn),
-			tcp_state_string(tcphdr));
 	return tcp_recv(pkb, iphdr, tcphdr);
 drop_pkb:
 	free_pkb(pkb);

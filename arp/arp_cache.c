@@ -18,10 +18,10 @@ static _inline void arp_cache_lock_init(void)
 		perrx("sem_init");
 }
 
-#ifdef DEBUG_LOCK
+#ifdef DEBUG_ARPCACHE_LOCK
 #define arp_cache_lock() do { dbg("lock"); sem_wait(&arp_cache_sem); } while(0)
 #define arp_cache_unlock() do { dbg("unlock"); sem_post(&arp_cache_sem); } while(0)
-#else	/* !DEBUG_LOCK */
+#else	/* !DEBUG_ARPCACHE_LOCK */
 static _inline void arp_cache_lock(void)
 {
 	sem_wait(&arp_cache_sem);
@@ -31,7 +31,7 @@ static _inline void arp_cache_unlock(void)
 {
 	sem_post(&arp_cache_sem);
 }
-#endif	/* end DEBUG_LOCK */
+#endif	/* end DEBUG_ARPCACHE_LOCK */
 
 #else	/* !DEBUG_SEM */
 
@@ -58,7 +58,7 @@ static _inline void arp_cache_lock_init(void)
 #endif
 }
 
-#ifdef DEBUG_LOCK
+#ifdef DEBUG_ARPCACHE_LOCK
 #define arp_cache_lock() do { dbg("lock"); pthread_mutex_lock(&arp_cache_mutex); } while(0)
 #define arp_cache_unlock() do { dbg("unlock"); pthread_mutex_unlock(&arp_cache_mutex); } while(0)
 #else

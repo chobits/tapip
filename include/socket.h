@@ -49,15 +49,16 @@ struct socket {
 	int refcnt;		/* refer to linux file::f_count */
 };
 
-extern struct socket *_socket(int family, int type, int protocol);
-extern int _listen(struct socket *sock, int backlog);
-extern void _close(struct socket *sock);
-extern int _bind(struct socket *sock, struct sock_addr *sk_addr);
+extern struct socket *_socket(int, int, int);
+extern int _listen(struct socket *, int);
+extern void _close(struct socket *);
+extern int _bind(struct socket *, struct sock_addr *);
 extern struct socket *_accept(struct socket *, struct sock_addr *);
-extern int _send(struct socket *sock, void *buf, int size,
-					struct sock_addr *skaddr);
-extern int _connect(struct socket *sock, struct sock_addr *sk_addr);
-extern struct pkbuf *_recv(struct socket *sock);
+extern int _send(struct socket *, void *, int, struct sock_addr *);
+extern int _connect(struct socket *, struct sock_addr *);
+extern int _read(struct socket *, void *, int);
+extern int _write(struct socket *, void *, int);
+extern struct pkbuf *_recv(struct socket *);
 extern void socket_init(void);
 
 #endif	/* socket.h */

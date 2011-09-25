@@ -28,7 +28,7 @@ void pkb_trim(struct pkbuf *pkb, int len)
 struct pkbuf *alloc_pkb(int size)
 {
 	struct pkbuf *pkb;
-	pkb = xmalloc(sizeof(*pkb) + size);
+	pkb = xzalloc(sizeof(*pkb) + size);
 	pkb->pk_len = size;
 	pkb->pk_pro = 0xffff;
 	pkb->pk_type = 0;

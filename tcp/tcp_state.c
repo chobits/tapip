@@ -67,6 +67,10 @@ static void tcp_listen(struct pkbuf *pkb, struct tcp_segment *seg, struct tcp_so
 		goto discarded;
 	/* set for first syn */
 	newtsk = tcp_listen_child_sock(tsk, seg);
+	if (!newtsk) {
+		tcpsdbg("cannot alloc new sock");
+		goto discarded;
+	}
 	newtsk->irs = seg->seq;
 	newtsk->iss = alloc_new_iss();
 	newtsk->rcv_nxt = seg->seq + 1;;
@@ -213,6 +217,21 @@ static int seq_check(struct tcp_segment *seg, struct tcp_sock *tsk)
 	return -1;
 }
 
+static _inline void __tcp_update_window(struct tcp_sock *tsk, struct tcp_segment *seg)
+{
+		tsk->snd_wnd = seg->wnd;	/* SND.WND is an offset from SND.UNA */
+		tsk->snd_wl1 = seg->seq;
+		tsk->snd_wl2 = seg->ack;
+}
+
+static _inline void tcp_update_window(struct tcp_sock *tsk, struct tcp_segment *seg)
+{
+	if ((tsk->snd_una <= seg->ack && seg->ack <= tsk->snd_nxt) &&
+		(tsk->snd_wl1 < seg->seq ||
+			(tsk->snd_wl1 == seg->seq && tsk->snd_wl2 <= seg->ack)))
+		__tcp_update_window(tsk, seg);
+}
+
 /* Tcp state process method is implemented via RFC 793 #SEGMENT ARRIVE */
 void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 {
@@ -225,7 +244,6 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 		return tcp_listen(pkb, seg, tsk);
 	if (tsk->state == TCP_SYN_SENT)
 		return tcp_synsent(pkb, seg, tsk);
-
 	/* state debug information */
 	switch (tsk->state) {
 	case TCP_SYN_RECV:
@@ -252,6 +270,9 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 	case TCP_TIME_WAIT:
 		tcpsdbg("TIME-WAIT");
 		break;
+	default:
+		tcpsdbg("Unknown State %d", tsk->state);
+		break;
 	}
 
 	/* first check sequence number */
@@ -265,14 +286,13 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 	/* second check the RST bit */
 	tcpsdbg("2. check rst");
 	if (tcphdr->rst) {
+		/* abort a connection */
 		switch (tsk->state) {
 		case TCP_SYN_RECV:
 			if (tsk->parent) {	/* passive open */
-				tcpsdbg("State to LISTEN");
-				tsk->state = TCP_LISTEN;
+				tcp_unhash(&tsk->sk);
 			} else {
 				/* signal user "connection refused" */
-				/* delte TCB */
 			}
 			break;
 		case TCP_ESTABLISHED:
@@ -282,31 +302,27 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 			/* RECEIVE and SEND receive reset response */
 			/* flush all segments queue */
 			/* signal user "connection reset" */
-			/* delete tcb */
 			break;
 		case TCP_CLOSING:
 		case TCP_LAST_ACK:
 		case TCP_TIME_WAIT:
-			/* delete tcb */
 			break;
 		}
+		tcpsdbg("State to CLOSED");
+		tsk->state = TCP_CLOSED;
+		free_sock(&tsk->sk);
+		goto drop;
 	}
 	/* third check security and precedence (ignored) */
 	tcpsdbg("3. NO check security and precedence");
 	/* fourth check the SYN bit */
 	tcpsdbg("4. check syn");
 	if (tcphdr->syn) {
-		/* only LISTEN and SYN-SENT should receive SYN */
-
-		/*
-		 * SYN must be in window, which it is an error.
-		 * SYN, not in window, has been handled in the first step.
-		 */
+		/* only LISTEN and SYN-SENT can receive SYN */
 		tcp_send_reset(tsk, seg);
 		/* RECEIVE and SEND receive reset response */
 		/* flush all segments queue */
 		/* signal user "connection reset" */
-		/* delete tcb */
 		/*
 		 * RFC 1122: error corrections of RFC 793:
 		 * In SYN-RECEIVED state and if the connection was initiated
@@ -315,6 +331,10 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 		 * - We delete child tsk directly,
 		 *   and its parent has been in LISTEN state.
 		 */
+		if (tsk->state == TCP_SYN_RECV && tsk->parent)
+			tcp_unhash(&tsk->sk);
+		tsk->state = TCP_CLOSED;
+		free_sock(&tsk->sk);
 	}
 	/* fifth check the ACK field */
 	tcpsdbg("5. check ack");
@@ -349,8 +369,7 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 		 *  -Yes for 4.4 BSD
 		 *  -Yes for xinu, although duplicate ACK
 		 *  -Yes for Linux,
-		 *  +Yes for tapip, ACK segment means the remote machine has received
-		 *                  our first SYN, although the ACK is duplicate.
+		 *  +Yes for tapip
 		 */
 		if (tsk->snd_una <= seg->ack && seg->ack <= tsk->snd_nxt) {
 			if (tcp_synrecv_ack(tsk) < 0) {
@@ -358,10 +377,8 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 				goto drop;		/* Should we drop it? */
 			}
 			tsk->snd_una = seg->ack;
-			/* RFC 1122: error corrections of RFC 793 */
-			tsk->snd_wnd = seg->wnd;
-			tsk->snd_wl1 = seg->seq;
-			tsk->snd_wl2 = seg->ack;
+			/* RFC 1122: error corrections of RFC 793(SND.W**) */
+			__tcp_update_window(tsk, seg);
 			tcpsdbg("State to ESTABLISHED");
 			tsk->state = TCP_ESTABLISHED;
 		} else {
@@ -405,22 +422,17 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 			 * Should we conitnue and not drop segment ?
 			 * -Yes for xinu
 			 * -Yes for linux
-			 * +Yes for tapip, I think the segment, whose ACK is a duplicate,
-			 *  maybe have useful data text or other control bits.
+			 * +Yes for tapip
 			 *
 			 * After three-way handshake connection is established, then
 			 * SND.UNA == SND.NXT, which means next remote packet ACK is
 			 * always duplicate. Although this happens frequently, we should
 			 * not view it as an error.
+			 *
+			 * Also window update packet will cause this situation.
 			 */
 		}
-		if ((tsk->snd_una <= seg->ack && seg->ack <= tsk->snd_nxt) &&
-			(tsk->snd_wl1 < seg->seq ||
-			(tsk->snd_wl1 == seg->seq && tsk->snd_wl2 <= seg->ack))) {
-			tsk->snd_wnd = seg->wnd;	/* SND.WND is an offset from SND.UNA */
-			tsk->snd_wl1 = seg->seq;
-			tsk->snd_wl2 = seg->ack;
-		}
+		tcp_update_window(tsk, seg);
 		break;
 	case TCP_FIN_WAIT2:
 	/*
@@ -470,29 +482,29 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 	tcpsdbg("7. segment text");
 	switch (tsk->state) {
 	case TCP_ESTABLISHED:
-		/* ?? */
-		break;
-	case TCP_CLOSE_WAIT:
-	case TCP_CLOSING:
-	case TCP_LAST_ACK:
-	case TCP_TIME_WAIT:
-		/* ignore */
-		break;
-
 	case TCP_FIN_WAIT1:
 	case TCP_FIN_WAIT2:
-		/* ?? */
+		if (tcphdr->psh || seg->dlen > 0)
+			tcp_recv_text(tsk, seg);
 		break;
+	/*
+	 * CLOSE-WAIT|CLOSING|LAST-ACK|TIME-WAIT:
+	 *  FIN has been received, so we ignore the segment text.
+	 *
+	 * OTHER STATES: segment is ignored!
+	 */
 	}
 	/* eighth check the FIN bit */
 	tcpsdbg("8. check fin");
 	if (tcphdr->fin) {
 		switch (tsk->state) {
 		case TCP_SYN_RECV:
-			/* SYN-RECV means remote->local connection is established */
+		/* SYN-RECV means remote->local connection is established */
 		case TCP_ESTABLISHED:
 			tcpsdbg("State to CLOSE-WAIT");
 			tsk->state = TCP_CLOSE_WAIT;	/* waiting user to close */
+			tsk->flags |= TCP_F_PUSH;
+			tsk->sk.ops->recv_notify(&tsk->sk);
 			break;
 		case TCP_FIN_WAIT1:
 			/*

@@ -114,3 +114,13 @@
 	[net shell]: udp_test -b 10.0.0.1:12345
         (waiting tom's message)
 
+================================================
+11. tcp test for receiving packet
+
+(bob)	bob # sudo ./tapip
+	[net shell]: tcp_test
+	bind 0.0.0.0:32768
+        (waiting tom's message)
+
+(tom)   tom # cat Makefile | nc 10.0.0.1 32768
+

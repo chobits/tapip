@@ -98,8 +98,15 @@ do {\
 #define NET_DEBUG_TCPSTATE	0x00000080
 #define NET_DEBUG_ALL		0xffffffff
 
+#define min(x,y) ({\
+	typeof(x) _x = (x);\
+	typeof(y) _y = (y);\
+	(void) (&_x == &_y);\
+	_x < _y ? _x : _y; })
+
 extern unsigned int net_debug;
 extern void *xmalloc(int);
+extern void *xzalloc(int);
 extern void perrx(char *str);
 extern int str2ip(char *str, unsigned int *ip);
 extern void printfs(int mlen, const char *fmt, ...);

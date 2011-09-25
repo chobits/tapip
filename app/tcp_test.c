@@ -15,26 +15,37 @@ do {\
 static struct socket *sock;
 static struct socket *csock;
 static struct sock_addr skaddr;
-
+static int quit = 0;
 static void close_socket(void)
 {
 	struct socket *tmp;
 	if (sock) {
+		printf("close server\n");
 		tmp = sock;
 		sock = NULL;
 		_close(tmp);
 	}
+	if (csock) {
+		printf("close client\n");
+		tmp = csock;
+		csock = NULL;
+		_close(tmp);
+	}
+
 }
 
 static void sigint(int num)
 {
         close_socket();
+	quit = 1;
 }
 
 static void init_options(void)
 {
 	memset(&skaddr, 0x0, sizeof(skaddr));
 	sock = NULL;
+	csock = NULL;
+	quit = 0;
 }
 
 static int init_signal(void)
@@ -47,19 +58,25 @@ static int init_signal(void)
         return 0;
 }
 
-static void connect_test(char *dst)
+static int connect_test(char *dst)
 {
 	int err;
 	err = parse_ip_port(dst, &skaddr.dst_addr, &skaddr.dst_port);
-	if (_connect(sock, &skaddr) == 0) {
+	if (err)
+		return err;
+	if ((err = _connect(sock, &skaddr)) == 0) {
 		printf("Three-way handshake is established\n");
 	} else {
 		printf("Three-way error\n");
 	}
+	return err;
 }
+
 
 void tcp_test(int argc, char **argv)
 {
+	char buf[4096];
+	int len;
 	if (argc > 2) {
 		printf("argc != 2\n");
 		return;
@@ -74,8 +91,9 @@ void tcp_test(int argc, char **argv)
 	if (!sock)
 		goto out;
 	if (argc == 2) {
-		connect_test(argv[1]);
-		goto out;
+		if (connect_test(argv[1]) < 0)
+			goto out;
+		goto send;
 	}
 	skaddr.src_addr = 0;
 	skaddr.src_port = 0;
@@ -91,20 +109,27 @@ void tcp_test(int argc, char **argv)
 	}
 	csock =_accept(sock, &skaddr);
 	if (csock) {
-		printf("Three-way handshake is established: from "IPFMT":%d\n",
+		printf("Three-way handshake successes: from "IPFMT":%d\n\n",
 				ipfmt(skaddr.src_addr), ntohs(skaddr.src_port));
 	} else {
 		printf("Three-way error\n");
+		goto out;
+	}
+	while ((len = _read(csock ? csock : sock, buf, 16)) > 0) {
+		printf("%.*s", len, buf);
+		fflush(stdout);
+	}
+	printf("last _read() return %d\n", len);
+	goto out;
+send:
+	while ((len = read(1, buf, 4096)) > 0) {
+		if (quit)
+			break;
+		if (_write(sock, buf, len) < 0) {
+			printf("_write error\n");
+			break;
+		}
 	}
 out:	/* close and out */
-	if (sock) {
-		_close(sock);
-		sock = NULL;
-	}
-	if (csock) {
-		sleep(10);
-		printf("close client");
-		_close(csock);
-		csock = NULL;
-	}
+	close_socket();
 }

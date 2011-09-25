@@ -174,12 +174,23 @@ out:
 
 static int inet_read(struct socket *sock, void *buf, int len)
 {
-	return 0;
+	struct sock *sk = sock->sk;
+	int ret = -1;
+	if (sk) {
+		sk->recv_wait = &sock->sleep;
+		ret = sk->ops->recv_buf(sock->sk, buf, len);
+		sk->recv_wait = NULL;
+	}
+	return ret;
 }
 
 static int inet_write(struct socket *sock, void *buf, int len)
 {
-	return 0;
+	struct sock *sk = sock->sk;
+	int ret = -1;
+	if (sk)
+		ret = sk->ops->send_buf(sock->sk, buf, len, NULL);
+	return ret;
 }
 
 static int inet_send(struct socket *sock, void *buf, int size,

@@ -18,6 +18,14 @@ void *xmalloc(int size)
 	return p;
 }
 
+void *xzalloc(int size)
+{
+	void *p = calloc(1, size);
+	if (!p)
+		perrx("calloc");
+	return p;
+}
+
 /* format and print mlen-max-size data (spaces will fill the buf) */
 static char *_space = "                                              ";
 void printfs(int mlen, const char *fmt, ...)

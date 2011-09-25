@@ -7,7 +7,7 @@
    A small shell is embedded in tapip.
    So this is just user-mode TCP/IP stack :)
 
-+ Any use? 
++ Any use?
   A toy!
   Tapip makes it easy to hack TCP/IP stack, just compiling it to run.
   It can also do some network test: arp snooping, proxy, and NAT!
@@ -15,4 +15,4 @@
    understand linux TCP/IP stack.
 
 + How to run?
-  See doc/net_topology, and select a script from doc/test
+  See doc/net_topology, and select a script from doc/test to do.

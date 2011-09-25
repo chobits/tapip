@@ -154,7 +154,7 @@ out:
 int _send(struct socket *sock, void *buf, int size, struct sock_addr *skaddr)
 {
 	int err = -1;
-	if (!sock || !buf || !skaddr)
+	if (!sock || !buf || size <= 0 || !skaddr)
 		goto out;
 	get_socket(sock);
 	if (sock->ops)
@@ -176,6 +176,34 @@ struct pkbuf *_recv(struct socket *sock)
 	free_socket(sock);
 out:
 	return pkb;
+}
+
+int _write(struct socket *sock, void *buf, int len)
+{
+	int ret = -1;
+	if (!sock || !buf || len <= 0)
+		goto out;
+	/* get reference for _close() safe */
+	get_socket(sock);
+	if (sock->ops)
+		ret = sock->ops->write(sock, buf, len);
+	free_socket(sock);
+out:
+	return ret;
+}
+
+int _read(struct socket *sock, void *buf, int len)
+{
+	int ret = -1;
+	if (!sock || !buf || len <= 0)
+		goto out;
+	/* get reference for _close() safe */
+	get_socket(sock);
+	if (sock->ops)
+		ret = sock->ops->read(sock, buf, len);
+	free_socket(sock);
+out:
+	return ret;
 }
 
 void socket_init(void)

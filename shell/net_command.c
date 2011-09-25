@@ -9,6 +9,7 @@
 #include "route.h"
 #include "netcfg.h"
 #include "sock.h"
+#include "cbuf.h"
 
 unsigned int net_debug = 0;
 
@@ -131,4 +132,8 @@ void stat(int argc, char **argv)
 		" alloced socks: %d\n"
 		" free socks:    %d\n",
 		alloc_socks, free_socks);
+	printf("[cbuf memory information]\n"
+		" alloced circul buffers: %d\n"
+		" free circul buffers:    %d\n",
+		alloc_cbufs, free_cbufs);
 }

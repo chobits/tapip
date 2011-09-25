@@ -3,6 +3,7 @@
 #include "tcp.h"
 #include "ip.h"
 #include "netif.h"
+#include "cbuf.h"
 
 static struct tcp_hash_table tcp_table;
 /* @src is for remote machine */
@@ -46,31 +47,6 @@ struct sock *tcp_lookup_sock(unsigned int src, unsigned int dst,
 	if (!sk)
 		sk = tcp_lookup_sock_listen(dst, dst_port);
 	return sk;
-}
-
-static int tcp_send_buf()
-{
-/*
-                 Generally, an interactive application protocol must set
-                 the PUSH flag at least in the last SEND call in each
-                 command or response sequence.  A bulk transfer protocol
-                 like FTP should set the PUSH flag on the last segment
-                 of a file or when necessary to prevent buffer deadlock.
- */
-	return 0;
-}
-
-static int tcp_recv()
-{
-/*
-                 At the receiver, the PSH bit forces buffered data to be
-                 delivered to the application (even if less than a full
-                 buffer has been received). Conversely, the lack of a
-                 PSH bit can be used to avoid unnecessary wakeup calls
-                 to the application process; this can be an important
-                 performance optimization for large timesharing hosts.
- */
-	return 0;
 }
 
 static _inline int __tcp_port_used(unsigned short nport, struct hlist_head *head)
@@ -170,7 +146,7 @@ int tcp_hash(struct sock *sk)
 	return 0;
 }
 
-static void tcp_unhash(struct sock *sk)
+void tcp_unhash(struct sock *sk)
 {
 	sock_del_hash(sk);
 	sk->hash = 0;
@@ -195,7 +171,7 @@ static int tcp_connect(struct sock *sk, struct sock_addr *skaddr)
 	int err;
 	if (tsk->state != TCP_CLOSED)
 		return -1;
-	sk->sk_daddr = skaddr->dst_addr;	
+	sk->sk_daddr = skaddr->dst_addr;
 	sk->sk_dport = skaddr->dst_port;
 	/* three-way handshake starts, send first SYN */
 	tsk->state = TCP_SYN_SENT;
@@ -206,7 +182,7 @@ static int tcp_connect(struct sock *sk, struct sock_addr *skaddr)
 		tsk->state = TCP_CLOSED;
 		return -1;
 	}
-	/* 
+	/*
 	 * Race condition:
 	 *  If we connect to localhost, then we will send syn
 	 *  and recv packet. It wakes up tsk->wait_connect without
@@ -273,7 +249,7 @@ out:
 }
 
 static void tcp_clear_listen_queue(struct tcp_sock *tsk)
-{	
+{
 	struct tcp_sock *ltsk;
 	while (!list_empty(&tsk->listen_queue)) {
 		ltsk = list_first_entry(&tsk->listen_queue, struct tcp_sock, list);
@@ -317,14 +293,106 @@ static int tcp_close(struct sock *sk)
 		tsk->snd_nxt++;
 		break;
 	}
+	tcp_free_buf(tsk);
 	return 0;
 }
 
+static int tcp_send_buf(struct sock *sk, void *buf, int len,
+			struct sock_addr *saddr)
+{
+	struct tcp_sock *tsk = tcpsk(sk);
+	int ret = -1;
+	switch (tsk->state) {
+	case TCP_CLOSED:
+	case TCP_LISTEN:	/* error: foreign socket unspecified */
+	case TCP_SYN_SENT:
+	case TCP_SYN_RECV:
+		/*
+		 * RFC 793 say we should queue the data until entering
+		 * ESTABLISHED state, but we return -1 directly.
+		 */
+	case TCP_FIN_WAIT1:
+	case TCP_FIN_WAIT2:
+	case TCP_LAST_ACK:
+	case TCP_CLOSING:
+	case TCP_TIME_WAIT:
+		goto out;
+	case TCP_ESTABLISHED:
+	case TCP_CLOSE_WAIT:
+		break;
+	}
+	ret = tcp_send_text(tsk, buf, len);
+out:
+	return ret;
+}
+
+static int tcp_recv_buf(struct sock *sk, char *buf, int len)
+{
+	struct tcp_sock *tsk = tcpsk(sk);
+	int ret = -1;
+	int rlen = 0;
+	int curlen;
+
+	switch (tsk->state) {
+	case TCP_LISTEN:
+	case TCP_SYN_SENT:
+	case TCP_SYN_RECV:
+		/*
+		 * RFC 793 say we should queue this request,
+		 * but we return -1 directly.
+		 */
+	case TCP_LAST_ACK:
+	case TCP_CLOSING:
+	case TCP_TIME_WAIT:
+	case TCP_CLOSED:
+		goto out;
+	case TCP_CLOSE_WAIT:
+		if (!tsk->rcv_buf || !CBUFUSED(tsk->rcv_buf))
+			goto out;
+	case TCP_ESTABLISHED:
+	case TCP_FIN_WAIT1:
+	case TCP_FIN_WAIT2:
+		break;
+	}
+
+	while (rlen < len) {
+		/* fill user buffer */
+		curlen = read_cbuf(tsk->rcv_buf, buf + rlen, len - rlen);
+		/* update windown, send WINUP? */
+		tsk->rcv_wnd += curlen;
+		rlen += curlen;
+		/* wait buffer filled */
+		while (!((tsk->flags & TCP_F_PUSH) ||
+			(tsk->rcv_buf && CBUFUSED(tsk->rcv_buf)) ||
+			(rlen >= len))) {
+			if (sleep_on(sk->recv_wait) < 0) {
+				ret = (rlen > 0) ? rlen : -1;
+				goto out;
+			}
+		}
+		/* Optimization: read as mush as data before PUSH to user */
+		if ((tsk->flags & TCP_F_PUSH) && !CBUFUSED(tsk->rcv_buf)) {
+			/* return to user process */
+			tsk->flags &= ~TCP_F_PUSH;
+			break;
+		}
+	}
+	ret = rlen;
+out:
+	return ret;
+}
+
+static void tcp_recv_notify(struct sock *sk)
+{
+	if (sk->recv_wait)
+		wake_up(sk->recv_wait);
+}
+
 static struct sock_ops tcp_ops = {
-//	.recv_notify = tcp_recv_notify,
-//	.recv = tcp_recv_pkb,
-//	.send_buf= tcp_send_buf,
+	.send_buf= tcp_send_buf,
 //	.send_pkb = tcp_send_pkb,
+	.recv_buf = tcp_recv_buf,
+	.recv_notify = tcp_recv_notify,
 	.listen = tcp_listen,
 	.accept = tcp_accept,
 	.connect = tcp_connect,
@@ -352,6 +420,7 @@ struct sock *tcp_alloc_sock(int protocol)
 	memset(tsk, 0x0, sizeof(*tsk));
 	tsk->sk.ops = &tcp_ops;
 	tsk->state = TCP_CLOSED;
+	tsk->rcv_wnd = TCP_DEFAULT_WINDOW;
 	list_init(&tsk->listen_queue);
 	list_init(&tsk->accept_queue);
 	list_init(&tsk->list);
