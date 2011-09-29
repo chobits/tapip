@@ -371,7 +371,8 @@ static int tcp_recv_buf(struct sock *sk, char *buf, int len)
 			}
 		}
 		/* Optimization: read as mush as data before PUSH to user */
-		if ((tsk->flags & TCP_F_PUSH) && !CBUFUSED(tsk->rcv_buf)) {
+		if ((tsk->flags & TCP_F_PUSH) &&
+			!(tsk->rcv_buf && CBUFUSED(tsk->rcv_buf))) {
 			/* return to user process */
 			tsk->flags &= ~TCP_F_PUSH;
 			break;
