@@ -95,7 +95,7 @@ static void icmp_dest_unreach(struct icmp_desc *icmp_desc, struct pkbuf *pkb)
 	free_pkb(pkb);
 }
 
-static char *redirectstr[4] = {
+static const char *redirectstr[4] = {
 	[ICMP_REDIRECT_NET]	= "net redirect",
 	[ICMP_REDIRECT_HOST]	= "host redirect",
 	[ICMP_REDIRECT_TOSNET]	= "type of serice and net redirect",
@@ -155,6 +155,10 @@ static void icmp_echo_request(struct icmp_desc *icmp_desc, struct pkbuf *pkb)
 		icmphdr->icmp_cksum += ICMP_T_ECHOREQ;
 	iphdr->ip_dst = iphdr->ip_src;	/* ip_src is set by ip_send_out() */
 	ip_hton(iphdr);
+	/* init reused input packet */
+	pkb->pk_rtdst = NULL;
+	pkb->pk_indev = NULL;
+	pkb->pk_type = PKT_NONE;
 	ip_send_out(pkb);
 }
 
