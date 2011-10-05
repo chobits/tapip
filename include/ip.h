@@ -98,13 +98,13 @@ static inline int equsubnet(unsigned int mask, unsigned int ip1, unsigned int ip
 }
 
 extern struct pkbuf *ip_reass(struct pkbuf *);
-extern void ip_send_dev(struct netdev *dev, struct pkbuf *pkb);
-extern void ip_send_out(struct pkbuf *pkb);
-extern void ip_send_info(struct pkbuf *pkb, unsigned char tos, unsigned short len,
-		unsigned char ttl, unsigned char pro, unsigned int dst);
-extern void ip_send_frag(struct netdev *dev, struct pkbuf *pkb);
-extern void ip_setchksum(struct ip *iphdr);
-extern void ip_in(struct netdev *dev, struct pkbuf *pkb);
+extern void ip_send_dev(struct netdev *, struct pkbuf *);
+extern void ip_send_out(struct pkbuf *);
+extern void ip_send_info(struct pkbuf *, unsigned char, unsigned short,
+		unsigned char, unsigned char, unsigned int);
+extern void ip_send_frag(struct netdev *, struct pkbuf *);
+extern void ip_in(struct netdev *, struct pkbuf *);
 extern void ip_timer(int delta);
+extern void ip_forward(struct pkbuf *pkb);
 
 #endif	/* ip */

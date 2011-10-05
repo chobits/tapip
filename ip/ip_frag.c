@@ -237,7 +237,7 @@ struct pkbuf *ip_frag(struct pkbuf *pkb, struct ip *orig, int hlen,
 	fraghdr->ip_len = htons(hlen + dlen);
 	mf_bit |= (off >> 3);
 	fraghdr->ip_fragoff = htons(mf_bit);
-	ip_setchksum(fraghdr);
+	ip_set_checksum(fraghdr);
 	return fragpkb;
 }
 

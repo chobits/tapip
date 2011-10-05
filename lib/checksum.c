@@ -80,3 +80,8 @@ void tcp_set_checksum(struct ip *iphdr, struct tcp *tcphdr)
 		IP_P_TCP, ipndlen(iphdr), (unsigned short *)tcphdr);
 }
 
+void ip_set_checksum(struct ip *iphdr)
+{
+	iphdr->ip_cksum = 0;
+	iphdr->ip_cksum = ip_chksum((unsigned short *)iphdr, iphlen(iphdr));
+}

@@ -21,7 +21,7 @@
 /* Why does not pthread.h extern this function? */
 extern int pthread_mutexattr_settype(pthread_mutexattr_t *, int);
 typedef void *(*pfunc_t)(void *);
-extern pthread_t threads[3];
+extern pthread_t threads[];
 extern int newthread(pfunc_t thread_func);
 
 #define gettid() syscall(SYS_gettid)
@@ -123,5 +123,6 @@ struct udp;
 struct tcp;
 extern void udp_set_checksum(struct ip *, struct udp *);
 extern void tcp_set_checksum(struct ip *, struct tcp *);
+extern void ip_set_checksum(struct ip *);
 
 #endif	/* lib.h */
