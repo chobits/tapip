@@ -1,6 +1,8 @@
 #### User configure  ###############
 CONFIG_DEBUG = n
+CONFIG_DEBUG_PKB = n
 CONFIG_DEBUG_WAIT = n
+CONFIG_DEBUG_SOCK = n
 CONFIG_DEBUG_ARP_LOCK = n
 CONFIG_DEBUG_ICMPEXCFRAGTIME = n
 CONFIG_TOPLOGY = 2
@@ -16,6 +18,14 @@ export LD CC CFLAGS
 
 ifeq ($(CONFIG_DEBUG), y)
 	CFLAGS += -g
+endif
+
+ifeq ($(CONFIG_DEBUG), y)
+	CFLAGS += -DDEBUG_PKB
+endif
+
+ifeq ($(CONFIG_DEBUG_SOCK), y)
+	CFLAGS += -DSOCK_DEBUG
 endif
 
 ifeq ($(CONFIG_DEBUG_ICMPEXCFRAGTIME), y)
@@ -50,29 +60,27 @@ all:tapip
 tapip:$(NET_STACK_OBJS)
 	$(CC) $(LFLAGS) $^ -o $@
 
-shell/shell_obj.o:shell/main.c shell/shell.c\
-		shell/net_command.c shell/ping_command.c
+shell/shell_obj.o:shell/*.c
 	@make -C shell/
-net/net_obj.o:net/net.c net/netdev.c net/tap.c net/pkb.c net/veth.c net/loop.c
+net/net_obj.o:net/*.c
 	@make -C net/
-arp/arp_obj.o:arp/arp.c arp/arp_cache.c
+arp/arp_obj.o:arp/*.c
 	@make -C arp/
-ip/ip_obj.o:ip/ip.c ip/route.c ip/ip_frag.c ip/icmp.c ip/raw.c
+ip/ip_obj.o:ip/*.c
 	@make -C ip/
-udp/udp_obj.o:udp/udp.c udp/udp_sock.c
+udp/udp_obj.o:udp/*.c
 	@make -C udp/
-tcp/tcp_obj.o:tcp/tcp.c tcp/tcp_sock.c tcp/tcp_out.c tcp/tcp_state.c\
-		tcp/tcp_text.c
+tcp/tcp_obj.o:tcp/*.c
 	@make -C tcp/
-lib/lib_obj.o:lib/lib.c lib/checksum.c lib/cbuf.c
+lib/lib_obj.o:lib/*.c
 	@make -C lib/
-socket/socket_obj.o:socket/socket.c socket/sock.c socket/raw_sock.c\
-		socket/inet.c
+socket/socket_obj.o:socket/*.c
 	@make -C socket/
-app/app_obj.o:app/ping.c app/udp_test.c app/tcp_test.c
+app/app_obj.o:app/*.c
 	@make -C app/
 
 test:cbuf
+# test program for circul buffer
 cbuf:lib/cbuf.c lib/lib.c
 	$(CC) -DCBUF_TEST -Iinclude/ $^ -o $@
 
