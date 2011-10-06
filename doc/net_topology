@@ -1,5 +1,5 @@
 =============================================================================
-TOP1 (Use tapip instead of kernel TCP/IP stack)
+TOP1 (Use tapip instead of linux kernel TCP/IP stack)
 =============================================================================
 
 +----------+
@@ -43,13 +43,13 @@ real network of TOP1
 
 =============================================================================
 How to build net environment of TOP1
- # (fix "CONFIG_TOP = 1" in global Makefile)
+ # (set "CONFIG_TOP = 1" in global Makefile)
  # (config real net environment in doc/brctl.sh)
- # ./doc/brctl.sh open
- # ./tapip
+ # ./doc/brctl.sh open      (run as root)
+ # ./tapip                  (run as root)
  [net shell]: (run some commands)
  ...
- # ./doc/brctl.sh close
+ # ./doc/brctl.sh close     (run as root)
 
 =============================================================================
 kernel-usermode stream of TOP1 ( usermode network stack receiving packet )

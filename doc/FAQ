@@ -1,4 +1,4 @@
-Frequently Asked Questions for TCP or Socket
+Frequently Asked Questions for TCP/UDP or Socket
 ==============================
 
 1. Can one port be bound to two different sockets?
@@ -82,7 +82,7 @@ Frequently Asked Questions for TCP or Socket
    (no `world` received)
 
   [tty2]# ./tapip
-  [net shell]: udp_test -c10.20.133.21:12345
+  [net shell]: snc -u -c10.20.133.21:12345
    (enter first one)
   hello
    (enter second one)

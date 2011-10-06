@@ -68,12 +68,10 @@ void net_in(struct netdev *dev, struct pkbuf *pkb)
 
 void net_timer(void)
 {
-	/* timer init if need */
-	sleep(1);
 	/* timer runs */
 	while (1) {
+		sleep(1);
 		arp_timer(1);
 		ip_timer(1);
-		sleep(1);
 	}
 }

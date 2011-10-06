@@ -71,7 +71,7 @@ static _inline void arp_cache_unlock(void)
 {
 	pthread_mutex_unlock(&arp_cache_mutex);
 }
-#endif
+#endif	/* end DEBUG_ARPCACHE_LOCK */
 #endif	/* end LOCK_SEM */
 
 void arp_queue_send(struct arpentry *ae)

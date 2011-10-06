@@ -1,12 +1,44 @@
+/*
+ * TCP state machine based on RFC 793 #SEGMENT ARRIVE
+ */
 #include "lib.h"
 #include "netif.h"
 #include "tcp.h"
 #include "ip.h"
 
+const char *tcp_state_string[TCP_MAX_STATE] = {
+	"Unknown tcp state: 0",
+	"CLOSED",
+	"LISTEN",
+	"SYN-RECV",
+	"SYN-SENT",
+	"ESTABLISHED",
+	"CLOSE-WAIT",
+	"LAST-ACK",
+	"FIN-WAIT-1",
+	"FIN-WAIT-2",
+	"CLOSING",
+	"TIME-WAIT",
+};
+
+static _inline void tcp_dbg_state(struct tcp_sock *tsk)
+{
+	/* state debug information */
+	if (!tsk)
+		tcpsdbg("CLOSED");
+	else if (tsk->state < TCP_MAX_STATE)
+		tcpsdbg("%s", tcp_state_string[tsk->state]);
+	else
+		tcpsdbg("Unknown tcp state: %d", tsk->state);
+}
+
+/*
+ * FIXME: this is a temp method for allocating SND.ISS
+ *        See RFC 793/1122 to implement standard algorithm
+ */
 unsigned int alloc_new_iss(void)
 {
 	static unsigned int iss = 12345678;
-	/* FIXME: rewrite iss allocing algorithm */
 	if (++iss >= 0xffffffff)
 		iss = 12345678;
 	return iss;
@@ -17,7 +49,7 @@ static struct tcp_sock *tcp_listen_child_sock(struct tcp_sock *tsk,
 {
 	struct sock *newsk = tcp_alloc_sock(tsk->sk.protocol);
 	struct tcp_sock *newtsk = tcpsk(newsk);
-	newtsk->state = TCP_SYN_RECV;
+	tcp_set_state(newtsk, TCP_SYN_RECV);
 	newsk->sk_saddr = seg->iphdr->ip_dst;
 	newsk->sk_daddr = seg->iphdr->ip_src;
 	newsk->sk_sport = seg->tcphdr->dst;
@@ -29,14 +61,15 @@ static struct tcp_sock *tcp_listen_child_sock(struct tcp_sock *tsk,
 	}
 	/*
 	 * Why to get parent reference?
-	 * to avoiding parent accidental release.
-	 * e.g. child is pending in three-way handshake,
-	 *      while parent is interrupted by user.
+	 * To avoid parent accidental release.
+	 * e.g: Parent is interrupted by user
+	 *      when child is pending in three-way handshake.
 	 */
 	newtsk->parent = get_tcp_sock(tsk);
 	/* FIXME: add limit to listen queue */
 	list_add(&newtsk->list, &tsk->listen_queue);
-	return get_tcp_sock(newtsk);	/* reference for listed into parent queue */
+	/* reference for being listed into parent queue */
+	return get_tcp_sock(newtsk);
 }
 
 static void tcp_listen(struct pkbuf *pkb, struct tcp_segment *seg, struct tcp_sock *tsk)
@@ -132,8 +165,7 @@ static void tcp_synsent(struct pkbuf *pkb, struct tcp_segment *seg,
 		if (tcphdr->ack) {
 			/* connect closed port */
 			tcpsdbg("Error:connection reset");
-			tcpsdbg("State to CLOSED");
-			tsk->state = TCP_CLOSED;
+			tcp_set_state(tsk, TCP_CLOSED);
 			if (tsk->wait_connect)
 				wake_up(tsk->wait_connect);
 			else
@@ -152,8 +184,7 @@ static void tcp_synsent(struct pkbuf *pkb, struct tcp_segment *seg,
 			tsk->snd_una = seg->ack;	/* snd_una: iss -> iss+1 */
 		/* delete retransmission queue which waits to be acknowledged */
 		if (tsk->snd_una > tsk->iss) {	/* rcv.ack = snd.syn.seq+1 */
-			tcpsdbg("State to ESTABLISHED");
-			tsk->state = TCP_ESTABLISHED;
+			tcp_set_state(tsk, TCP_ESTABLISHED);
 			/* RFC 1122: error corrections of RFC 793 */
 			tsk->snd_wnd = seg->wnd;
 			tsk->snd_wl1 = seg->seq;
@@ -169,7 +200,7 @@ static void tcp_synsent(struct pkbuf *pkb, struct tcp_segment *seg,
 			 */
 		} else {		/* simultaneous open */
 			/* XXX: test */
-			tsk->state = TCP_SYN_RECV;
+			tcp_set_state(tsk, TCP_SYN_RECV);
 			/* reply SYN+ACK seq=iss,ack=rcv.nxt */
 			tcp_send_synack(tsk, seg);
 			tcpsdbg("Simultaneous open(SYN-SENT => SYN-RECV)");
@@ -237,44 +268,15 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 {
 	struct tcp_sock *tsk = tcpsk(sk);
 	struct tcp *tcphdr = seg->tcphdr;
-
+	tcp_dbg_state(tsk);
 	if (!tsk || tsk->state == TCP_CLOSED)
 		return tcp_closed(tsk, pkb, seg);
 	if (tsk->state == TCP_LISTEN)
 		return tcp_listen(pkb, seg, tsk);
 	if (tsk->state == TCP_SYN_SENT)
 		return tcp_synsent(pkb, seg, tsk);
-	/* state debug information */
-	switch (tsk->state) {
-	case TCP_SYN_RECV:
-		tcpsdbg("SYN-RECV");
-		break;
-	case TCP_ESTABLISHED:
-		tcpsdbg("ESTABLISHED");
-		break;
-	case TCP_FIN_WAIT1:
-		tcpsdbg("FIN-WAIT-1");
-		break;
-	case TCP_FIN_WAIT2:
-		tcpsdbg("FIN-WAIT-2");
-		break;
-	case TCP_CLOSE_WAIT:
-		tcpsdbg("CLOSE-WAIT");
-		break;
-	case TCP_CLOSING:
-		tcpsdbg("CLOSING");
-		break;
-	case TCP_LAST_ACK:
-		tcpsdbg("LAST-ACK");
-		break;
-	case TCP_TIME_WAIT:
-		tcpsdbg("TIME-WAIT");
-		break;
-	default:
-		tcpsdbg("Unknown State %d", tsk->state);
-		break;
-	}
-
+	if (tsk->state >= TCP_MAX_STATE)
+		goto drop;
 	/* first check sequence number */
 	tcpsdbg("1. check seq");
 	if (seq_check(seg, tsk) < 0) {
@@ -308,9 +310,9 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 		case TCP_TIME_WAIT:
 			break;
 		}
-		tcpsdbg("State to CLOSED");
-		tsk->state = TCP_CLOSED;
-		free_sock(&tsk->sk);
+		tcp_set_state(tsk, TCP_CLOSED);
+		tcp_unhash(&tsk->sk);
+		tcp_unbhash(tsk);
 		goto drop;
 	}
 	/* third check security and precedence (ignored) */
@@ -333,7 +335,7 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 		 */
 		if (tsk->state == TCP_SYN_RECV && tsk->parent)
 			tcp_unhash(&tsk->sk);
-		tsk->state = TCP_CLOSED;
+		tcp_set_state(tsk, TCP_CLOSED);
 		free_sock(&tsk->sk);
 	}
 	/* fifth check the ACK field */
@@ -379,8 +381,7 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 			tsk->snd_una = seg->ack;
 			/* RFC 1122: error corrections of RFC 793(SND.W**) */
 			__tcp_update_window(tsk, seg);
-			tcpsdbg("State to ESTABLISHED");
-			tsk->state = TCP_ESTABLISHED;
+			tcp_set_state(tsk, TCP_ESTABLISHED);
 		} else {
 			tcp_send_reset(tsk, seg);
 			goto drop;
@@ -399,17 +400,15 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 			 * queue which are thereby entirely acknowledged
 			 * */
 			if (tsk->state == TCP_FIN_WAIT1) {
-				tcpsdbg("State to FIN-WAIT-2");
-				tsk->state = TCP_FIN_WAIT2;
+				tcp_set_state(tsk, TCP_FIN_WAIT2);
 			} else if (tsk->state == TCP_CLOSING) {
-				tcpsdbg("State to TIME-WAIT");
-				tsk->state = TCP_TIME_WAIT;
-				/* FIXME: 2MSL timer */
+				tcp_set_timewait_timer(tsk);
 				goto drop;
 			} else if (tsk->state == TCP_LAST_ACK) {
-				tcpsdbg("State to CLOSED(delete TCB)");
-				tsk->state = TCP_CLOSED;
-				free_sock(&tsk->sk);
+				tcp_set_state(tsk, TCP_CLOSED);
+				tcp_unhash(&tsk->sk);
+				/* for tcp active open */
+				tcp_unbhash(tsk);
 				goto drop;
 			}
 		} else if (seg->ack > tsk->snd_nxt) {		/* something not yet sent */
@@ -501,8 +500,8 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 		case TCP_SYN_RECV:
 		/* SYN-RECV means remote->local connection is established */
 		case TCP_ESTABLISHED:
-			tcpsdbg("State to CLOSE-WAIT");
-			tsk->state = TCP_CLOSE_WAIT;	/* waiting user to close */
+			/* waiting user to close */
+			tcp_set_state(tsk, TCP_CLOSE_WAIT);
 			tsk->flags |= TCP_F_PUSH;
 			tsk->sk.ops->recv_notify(&tsk->sk);
 			break;
@@ -518,8 +517,7 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 			 * state has been set to FIN-WAIT2
 			 */
 			tcpsdbg("<ERROR> cannot be here!");
-			tcpsdbg("State to CLOSING");
-			tsk->state = TCP_CLOSING;
+			tcp_set_state(tsk, TCP_CLOSING);
 			break;
 		case TCP_CLOSE_WAIT:
 			/* Remain in the CLOSE-WAIT state */
@@ -535,9 +533,8 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 			/* restart the 2 MSL time-wait timeout */
 			break;
 		case TCP_FIN_WAIT2:
-			/* FIXME: start 2MSL timer, turn off the other timers. */
-			tcpsdbg("State to TIME-WAIT");
-			tsk->state = TCP_TIME_WAIT;
+			/* FIXME: turn off the other timers. */
+			tcp_set_timewait_timer(tsk);
 			break;
 		}
 		/* singal the user "connection closing" */

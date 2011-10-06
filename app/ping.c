@@ -1,6 +1,6 @@
 /*
  * ping - raw ip version
- *        It is implemented via our defined _socket apis!
+ *        It is implemented based on tapip _socket() apis!
  */
 #include "lib.h"
 #include "netif.h"
@@ -31,8 +31,7 @@ static void usage(void)
 		"OPTIONS:\n"
 		"       -s size     icmp echo size\n"
 		"       -c count    times(not implemented)\n"
-		"       -t ttl      time to live\n"
-	);
+		"       -t ttl      time to live\n");
 }
 
 void init_options(void)
@@ -106,12 +105,12 @@ static void close_socket(void)
 	struct socket *tmp;
 	if (sock) {
 		/*
-		 * set sock to NULL before close it
-		 * Otherwise shell thread close it when I enter Ctrl + C to
-		 * send an interrupt signal to main thread,
-		 * and then ping thread will wake up to close it also,
-		 * which cause a segment fault for double freeing.
-		 * FIXME: send tty signal to ping thread
+		 * It sets sock to NULL before closing it.
+		 * Otherwise shell thread will close it when I enter Ctrl + C
+		 * to send an interrupt signal to main thread, and then ping
+		 * thread will wake up to close it also, which cause a segment
+		 * fault for double freeing.
+		 * FIXME: send tty signal only to ping thread
 		 */
 		tmp = sock;
 		sock = NULL;
@@ -132,7 +131,6 @@ static void send_packet(void)
 			size + ICMP_HRD_SZ + IP_HRD_SZ);
 		first = 0;
 	}
-
 
 	/* fill icmp data */
 	memset(icmphdr->icmp_data, 'x', size);
@@ -164,7 +162,8 @@ static void sigalrm(int num)
 
 static void ping_stat(void)
 {
-	printf("\n"
+	printf(
+		"\n"
 		"--- " IPFMT " ping statistics ---\n"
 		"%d packets transmitted, %d received, %d%% packet loss\n",
 		ipfmt(ipaddr), psend, precv, (psend - precv) * 100 / psend);
@@ -193,10 +192,8 @@ static void recv_packet(void)
 			icmphdr->icmp_type == ICMP_T_ECHORLY) {
 			recv--;
 			printf("%d bytes from " IPFMT ": icmp_seq=%d ttl=%d\n",
-							ipdlen(iphdr),
-							ipfmt(iphdr->ip_src),
-							ntohs(icmphdr->icmp_seq),
-							iphdr->ip_ttl);
+				ipdlen(iphdr), ipfmt(iphdr->ip_src),
+				ntohs(icmphdr->icmp_seq), iphdr->ip_ttl);
 			precv++;
 		}
 		free_pkb(pkb);

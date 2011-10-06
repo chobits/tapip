@@ -92,7 +92,7 @@ free_pkb:
 }
 
 /*
- * The algorithm is strict based on RFC 826 ( and referred to linux )
+ * The algorithm is strictly based on RFC 826 ( and referred to linux )
  * ARP Packet Reception
  */
 void arp_in(struct netdev *dev, struct pkbuf *pkb)

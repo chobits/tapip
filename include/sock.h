@@ -64,8 +64,19 @@ struct sock {
 
 extern void sock_add_hash(struct sock *, struct hlist_head *);
 extern void sock_del_hash(struct sock *);
-extern struct sock *get_sock(struct sock *sk);
+#ifdef SOCK_DEBUG
+#define free_sock(sk)\
+	do {\
+		dbg("%p %d--", (sk), (sk)->refcnt);\
+		_free_sock(sk);\
+	} while (0)
+#define get_sock(sk) ({dbg("%p %d++", (sk), (sk)->refcnt); _get_sock(sk);})
+extern void _free_sock(struct sock *sk);
+extern struct sock *_get_sock(struct sock *sk);
+#else
 extern void free_sock(struct sock *sk);
+extern struct sock *get_sock(struct sock *sk);
+#endif
 
 extern void sock_recv_notify(struct sock *sk);
 extern struct pkbuf *sock_recv_pkb(struct sock *sk);

@@ -21,13 +21,21 @@ void sock_del_hash(struct sock *sk)
 	}
 }
 
+#ifdef SOCK_DEBUG
+struct sock *_get_sock(struct sock *sk)
+#else
 struct sock *get_sock(struct sock *sk)
+#endif
 {
 	sk->refcnt++;
 	return sk;
 }
 
+#ifdef SOCK_DEBUG
+void _free_sock(struct sock *sk)
+#else
 void free_sock(struct sock *sk)
+#endif
 {
 	if (--sk->refcnt <= 0) {
 		free_socks++;

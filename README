@@ -15,4 +15,16 @@
    understand linux TCP/IP stack.
 
 + How to run?
-  See doc/net_topology, and select a script from doc/test to do.
+  Quick start:
+    $ make
+    # ./tapip                    (run as root)
+    [net shell]: ping 10.0.0.2   (ping linux kernel TCP/IP stack)
+    (waiting icmp echo reply...)
+    [net shell]: help            (see all embedded commands)
+    ...
+
+  More information for hacking TCP/UDP/IP/ICMP:
+    See doc/net_topology, and select a script from doc/test to do.
+
++ Author?
+  Xiaochen Wang <wangxiaochen0@gmail.com>

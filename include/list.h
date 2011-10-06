@@ -1,3 +1,6 @@
+/*
+ * Simple double linked list and hash list implementation
+ */
 #ifndef __LIST_H
 #define __LIST_H
 
@@ -7,6 +10,9 @@
 #define NULL ((void *)0)
 #endif
 
+/*
+ * Double linked list
+ */
 /* list head */
 struct list_head {
 	struct list_head *prev, *next;
@@ -61,8 +67,7 @@ static _inline void list_del_init(struct list_head *list)
 
 #define list_empty(head) ((head) == (head)->next)
 
-#define list_entry(ptr, type, member)\
-	((type *)((char *)(ptr) - (int)&((type *)0)->member))
+#define list_entry(ptr, type, member) containof(ptr, type, member)
 #define list_first_entry(head, type, member)\
 	list_entry((head)->next, type, member)
 #define list_last_entry(head, type, member)\
@@ -83,6 +88,9 @@ static _inline void list_del_init(struct list_head *list)
 		&entry->member != (head);\
 		entry = list_last_entry(&entry->member, typeof(*entry), member))
 
+/*
+ * Hash list
+ */
 /* hash list head */
 struct hlist_head {
 	struct hlist_node *first;

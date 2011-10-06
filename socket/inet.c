@@ -85,6 +85,7 @@ static int inet_accept(struct socket *sock,
 		goto out;
 	newsk = sk->ops->accept(sk);
 	if (newsk) {
+		/* this reference for inet_close() */
 		newsock->sk = get_sock(newsk);
 		if (skaddr) {
 			skaddr->src_addr = newsk->sk_daddr;

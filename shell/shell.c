@@ -18,8 +18,7 @@ extern void stat(int, char **);
 extern void route(int, char **);
 extern void ping(int, char **);
 extern void ping2(int, char **);
-extern void udp_test(int, char **);
-extern void tcp_test(int, char **);
+extern void snc(int, char **);
 
 struct command {
 	int cmd_new;	/* new thread flag */
@@ -73,8 +72,7 @@ static struct command cmds[] = {
 	{ 0, 1, stat, "stat", "display pkb/sock information" },
 	/* new thread command */
 	{ 1, CMD_NONUM, ping, "ping", "ping [OPTIONS] ipaddr" },
-	{ 1, CMD_NONUM, udp_test, "udp_test", "test udp recv and send" },
-	{ 1, CMD_NONUM, tcp_test, "tcp_test", "test tcp process" },
+	{ 1, CMD_NONUM, snc, "snc", "Simplex Net Cat" },
 	/* last one */
 	{ 0, 0, NULL, NULL, NULL }	/* can also use sizeof(cmds)/sizeof(cmds[0]) for cmds number */
 };

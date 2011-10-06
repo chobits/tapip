@@ -60,6 +60,7 @@ struct pkbuf {
 } __attribute__((packed));
 
 /* packet hardware address type */
+#define PKT_NONE	0
 #define PKT_LOCALHOST	1
 #define PKT_OTHERHOST	2
 #define PKT_MULTICAST	3

@@ -13,9 +13,18 @@
 
 unsigned int net_debug = 0;
 
-void usage(void)
+
+static void debug_usage(void)
 {
-	ferr("Usage: debug [-c|-n] (dev|l2|arp|ip|icmp|udp|tcp|tcpstate)+\n");
+	ferr(
+		"Usage: debug [-c|-n] (dev|l2|arp|ip|icmp|udp|tcp|tcpstate)+\n"
+		"     -c    clear non-blocking debug config\n"
+		"     -n    open non-blocking debug \n\n"
+		"EXAMPLES:\n"
+		"  See IP packet flow in blocking model \n"
+		"   # debug ip\n"
+		"  See TCP packet flow and TCP state transmission in non-blocking model\n"
+		"   # debug -n tcp tcpstate\n\n");
 }
 
 void signal_wait(int signum)
@@ -31,34 +40,33 @@ void netdebug(int argc, char **argv)
 	int noblock = 0;
 	int clear = 0;
 	unsigned int debug = 0;
+
 	do {
 		argc--;
-		if (strcmp(argv[argc], "-n") == 0) {
+		if (strcmp(argv[argc], "-n") == 0)
 			noblock = 1;
-		} else if (strcmp(argv[argc], "-c") == 0) {
+		else if (strcmp(argv[argc], "-c") == 0)
 			clear = 1;
-		} else if (strcmp(argv[argc], "dev") == 0) {
+		else if (strcmp(argv[argc], "dev") == 0)
 			debug |= NET_DEBUG_DEV;
-		} else if (strcmp(argv[argc], "l2") == 0) {
+		else if (strcmp(argv[argc], "l2") == 0)
 			debug |= NET_DEBUG_L2;
-		} else if (strcmp(argv[argc], "arp") == 0) {
+		else if (strcmp(argv[argc], "arp") == 0)
 			debug |= NET_DEBUG_ARP;
-		} else if (strcmp(argv[argc], "ip") == 0) {
+		else if (strcmp(argv[argc], "ip") == 0)
 			debug |= NET_DEBUG_IP;
-		} else if (strcmp(argv[argc], "icmp") == 0) {
+		else if (strcmp(argv[argc], "icmp") == 0)
 			debug |= NET_DEBUG_ICMP;
-		} else if (strcmp(argv[argc], "udp") == 0) {
+		else if (strcmp(argv[argc], "udp") == 0)
 			debug |= NET_DEBUG_UDP;
-		} else if (strcmp(argv[argc], "tcp") == 0) {
+		else if (strcmp(argv[argc], "tcp") == 0)
 			debug |= NET_DEBUG_TCP;
-		} else if (strcmp(argv[argc], "tcpstate") == 0) {
+		else if (strcmp(argv[argc], "tcpstate") == 0)
 			debug |= NET_DEBUG_TCPSTATE;
-		} else if (strcmp(argv[argc], "all") == 0) {
+		else if (strcmp(argv[argc], "all") == 0)
 			debug |= NET_DEBUG_ALL;
-		} else {
-			usage();
-			return;
-		}
+		else
+			return debug_usage();
 	} while (argc > 1);
 
 	/* clear debug flags */

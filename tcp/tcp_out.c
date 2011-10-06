@@ -43,7 +43,7 @@ void tcp_send_out(struct tcp_sock *tsk, struct pkbuf *pkb, struct tcp_segment *s
 	} else if (tsk) {
 		daddr = tsk->sk.sk_daddr;
 		saddr = tsk->sk.sk_saddr;
-	} else
+	} else	/* This shouldnt happen. */
 		assert(0);
 
 	if (tcp_init_pkb(tsk, pkb, saddr, daddr) < 0) {

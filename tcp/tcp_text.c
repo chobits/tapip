@@ -8,8 +8,10 @@
 
 void tcp_free_buf(struct tcp_sock *tsk)
 {
-	if (tsk->rcv_buf)
+	if (tsk->rcv_buf) {
 		free_cbuf(tsk->rcv_buf);
+		tsk->rcv_buf = NULL;
+	}
 }
 
 /*

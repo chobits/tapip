@@ -1,43 +1,32 @@
-1.
- TCP protocol implementation
+1. TCP implementation
  not implemented:
-  timer
+  timer(retransmission/...)
   packet retransmission
+  tcp option handling
 ---
  implemented:
   tcp three-way handshake connection
   tcp connection terminal
   tcp data receiving and sending
-2.
- network debug tools:
-  traceroute, arping, ss, route, arp, ip [...]
+  tcp TIME-WAIT timer
+
+2. Application support
+ network debug tools: traceroute, arping, ss, route, arp, ip [...]
+
 3.
  In TOP1, l2 cannot receive its reply packet sometimes!
- Should we using a single thread to receive packet and
- another thread to parse it?
-4.
- Ping cause segment fault sometimes!
----
- This bug is caused by condition race of freed socket structure.
- When I enter Ctrl + C, an interrupt signal is sent to shell thread, not to
- ping thread, then _close()->free_socket() will free socket structure,
- at the same time ping thread will return from _recv(), which is waken up
- by _close()->wait_exit().
- ping thread also call _close() to socket structure, which cause double
- free to socket!
+ (Should we use a single thread to receive packet and
+  another thread to parse it?)
 
- I set sock to NULL before free it, so ping thread will not free it again!
- Another method is set a mutex to sock.
-
- But the final method is to make tty signal be sent to ping thread, which is
- left to do sometime.
 5.
- Add bridge programming, then we should not use brctl
- and can delete doc/brctl.sh
+ Add bridge programming, then we will not use brctl and can delete doc/brctl.sh
+
 6.
- test udp get port alogrithm
+ test udp port allocation alogrithm
+
 7.
- multicast/broadcast address handle
-8.
+ multicast/broadcast ip address handle
  ip option handle
 
+8.
+ icmp error report to l4(TCP/UDP/RawIP)

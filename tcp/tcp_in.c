@@ -3,7 +3,7 @@
 #include "tcp.h"
 #include "ip.h"
 
-static char *tcp_state_string(struct tcp *tcphdr)
+static char *tcp_control_string(struct tcp *tcphdr)
 {
 	static char ss[32];
 	char *ssp = ss;
@@ -59,7 +59,7 @@ static void tcp_segment_init(struct tcp_segment *seg, struct ip *iphdr, struct t
 			ipfmt(iphdr->ip_src), ntohs(tcphdr->src),
 			ipfmt(iphdr->ip_dst), ntohs(tcphdr->dst),
 			ntohl(tcphdr->seq), seg->dlen, seg->len,
-			ntohl(tcphdr->ackn), tcp_state_string(tcphdr));
+			ntohl(tcphdr->ackn), tcp_control_string(tcphdr));
 }
 
 static void tcp_recv(struct pkbuf *pkb, struct ip *iphdr, struct tcp *tcphdr)

@@ -3,6 +3,7 @@
 
 #include "sock.h"
 #include "list.h"
+#include "tcp_timer.h"
 
 #define TCP_DEFAULT_WINDOW	4096
 #define TCP_DEFAULT_TTL		64
@@ -64,7 +65,8 @@ enum tcp_state {
 	TCP_FIN_WAIT1,
 	TCP_FIN_WAIT2,
 	TCP_CLOSING,
-	TCP_TIME_WAIT
+	TCP_TIME_WAIT,
+	TCP_MAX_STATE
 };
 
 struct tcp_sock {
@@ -76,6 +78,7 @@ struct tcp_sock {
 	struct list_head listen_queue;	/* waiting for second SYN+ACK of three-way handshake */
 	struct list_head accept_queue;	/* waiting for third ACK of three-way handshake */
 	struct list_head list;
+	struct tcp_timer timewait;	/* TIME-WAIT TIMEOUT */
 	struct wait *wait_accept;
 	struct wait *wait_connect;
 	struct tcp_sock *parent;
@@ -97,9 +100,9 @@ struct tcp_sock {
 };
 
 #define tcpsk(sk) ((struct tcp_sock *)sk)
-#define TCP_MAX_BACKLOG 128
-
-#define TCP_F_PUSH	0x00000001	/* text pushing to user */
+#define TCP_MAX_BACKLOG		128
+#define TCP_DEAD_PARENT		((struct tcp_sock *)0xffffdaed)
+#define TCP_F_PUSH		0x00000001	/* text pushing to user */
 
 /* host-order tcp current segment (RFC 793) */
 struct tcp_segment {
@@ -145,6 +148,7 @@ extern void tcp_process(struct pkbuf *, struct tcp_segment *, struct sock *);
 extern struct sock *tcp_alloc_sock(int);
 extern int tcp_hash(struct sock *);
 extern void tcp_unhash(struct sock *);
+extern void tcp_unbhash(struct tcp_sock *);
 extern void tcp_init(void);
 extern struct tcp_sock *get_tcp_sock(struct tcp_sock *);
 extern void tcp_send_reset(struct tcp_sock *, struct tcp_segment *);
@@ -159,8 +163,16 @@ extern int tcp_send_text(struct tcp_sock *, void *, int);
 
 extern unsigned int alloc_new_iss(void);
 extern int tcp_id;
+extern const char *tcp_state_string[];
 
 #define for_each_tcp_sock(tsk, node, head)\
 	hlist_for_each_entry(tsk, node, head, bhash_list)
+
+static _inline void tcp_set_state(struct tcp_sock *tsk, enum tcp_state state)
+{
+	tcpsdbg("State from %s to %s", tcp_state_string[tsk->state],
+					tcp_state_string[state]);
+	tsk->state = state;
+}
 
 #endif	/* tcp.h */

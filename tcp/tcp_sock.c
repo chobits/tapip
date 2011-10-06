@@ -85,7 +85,7 @@ static unsigned short tcp_get_port(void)
 
 static void tcp_bhash(struct tcp_sock *tsk)
 {
-	get_sock(&tsk->sk);
+	get_tcp_sock(tsk);
 	hlist_add_head(&tsk->bhash_list, tcp_bhash_head(tsk->bhash));
 }
 
@@ -110,7 +110,7 @@ static void tcp_unset_sport(struct sock *sk)
 	tcp_table.bfree++;
 }
 
-static void tcp_unbhash(struct tcp_sock *tsk)
+void tcp_unbhash(struct tcp_sock *tsk)
 {
 	if (!hlist_unhashed(&tsk->bhash_list)) {
 		tcp_unset_sport(&tsk->sk);
@@ -243,7 +243,7 @@ static struct sock *tcp_accept(struct sock *sk)
 	free_sock(&newtsk->sk);
 	/* disassociate it with parent */
 	free_sock(&newtsk->parent->sk);
-	newtsk->parent = NULL;
+	newtsk->parent = TCP_DEAD_PARENT;
 out:
 	return newtsk ? &newtsk->sk : NULL;
 }
@@ -405,7 +405,7 @@ static struct sock_ops tcp_ops = {
 
 struct tcp_sock *get_tcp_sock(struct tcp_sock *tsk)
 {
-	tsk->sk.refcnt++;
+	get_sock(&tsk->sk);
 	return tsk;
 }
 
