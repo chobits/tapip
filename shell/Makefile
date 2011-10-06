@@ -1,22 +1,14 @@
-OBJS	=	main.o		\
-		net_command.o	\
-		ping_command.o	\
-		shell.o
+OBJS	= main.o net_command.o ping_command.o shell.o
+SUBDIR	= shell
 
 all:shell_obj.o
 shell_obj.o:$(OBJS)
-	$(LD) -r -o $@ $^
-main.o:main.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-net_command.o:net_command.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-ping_command.o:ping_command.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-shell.o:shell.c
-	$(CC) $(CFLAGS) -c -o $@ $<
+	@echo " [LD] $(SUBDIR)/$@"
+	$(Q)$(LD) -r -o $@ $^
 
-test_shell:shell.c
-	$(CC) $(CFLAGS) -DTEST_SHELL $< -o $@
+%.o:%.c
+	@echo " [CC] $(SUBDIR)/$@"
+	$(Q)$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
 	rm -f *.o

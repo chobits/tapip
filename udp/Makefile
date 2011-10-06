@@ -1,13 +1,14 @@
 OBJS	=	udp.o udp_sock.o
+SUBDIR	= udp
 
 all:udp_obj.o
 udp_obj.o:$(OBJS)
-	$(LD) -r -o $@ $^
+	@echo " [LD] $(SUBDIR)/$@"
+	$(Q)$(LD) -r -o $@ $^
 
-udp.o:udp.c
-	$(CC) $(CFLAGS) -c $< -o $@
-udp_sock.o:udp_sock.c
-	$(CC) $(CFLAGS) -c $< -o $@
+%.o:%.c
+	@echo " [CC] $(SUBDIR)/$@"
+	$(Q)$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
 	rm -f *.o

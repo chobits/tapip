@@ -1,13 +1,14 @@
-OBJS	=	ping.o		\
-		snc.o
+OBJS	= ping.o snc.o
+SUBDIR	= app
 
 all:app_obj.o
 app_obj.o:$(OBJS)
-	$(LD) -r -o $@ $^
-ping.o:ping.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-snc.o:snc.c
-	$(CC) $(CFLAGS) -c -o $@ $<
+	@echo " [LD] $(SUBDIR)/$@"
+	$(Q)$(LD) -r -o $@ $^
+
+%.o:%.c
+	@echo " [CC] $(SUBDIR)/$@"
+	$(Q)$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
 	rm -f *.o

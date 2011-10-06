@@ -8,6 +8,14 @@ CONFIG_DEBUG_ICMPEXCFRAGTIME = n
 CONFIG_TOPLOGY = 2
 #### End of User configure #########
 
+# Use 'make V=1' to see the full commands
+ifeq ("$(origin V)", "command line")
+	Q =
+else
+	Q = @
+endif
+export Q
+
 MAKEFLAGS += --no-print-directory
 
 LD = ld
@@ -58,7 +66,8 @@ NET_STACK_OBJS =	shell/shell_obj.o	\
 
 all:tapip
 tapip:$(NET_STACK_OBJS)
-	$(CC) $(LFLAGS) $^ -o $@
+	@echo " [BUILD] $@"
+	$(Q)$(CC) $(LFLAGS) $^ -o $@
 
 shell/shell_obj.o:shell/*.c
 	@make -C shell/
@@ -82,22 +91,14 @@ app/app_obj.o:app/*.c
 test:cbuf
 # test program for circul buffer
 cbuf:lib/cbuf.c lib/lib.c
-	$(CC) -DCBUF_TEST -Iinclude/ $^ -o $@
+	@echo " [CC] $@"
+	$(Q)$(CC) -DCBUF_TEST -Iinclude/ $^ -o $@
 
 tag:
 	ctags -R *
 
 clean:
-	@make -C net/ clean
-	@make -C shell/ clean
-	@make -C arp/ clean
-	@make -C ip/ clean
-	@make -C udp/ clean
-	@make -C tcp/ clean
-	@make -C lib/ clean
-	@make -C socket/ clean
-	@make -C app/ clean
-	rm -f tapip cbuf
+	rm -f */*.o */*.obj tapip cbuf
 
 lines:
 	@echo "code lines:"

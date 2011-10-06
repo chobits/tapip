@@ -1,17 +1,14 @@
 OBJS	= socket.o sock.o raw_sock.o inet.o
+SUBDIR	= tcp
 
 all:socket_obj.o
 socket_obj.o:$(OBJS)
-	$(LD) -r -o $@ $^
+	@echo " [LD] $(SUBDIR)/$@"
+	$(Q)$(LD) -r -o $@ $^
 
-socket.o:socket.c
-	$(CC) $(CFLAGS) -c $< -o $@
-sock.o:sock.c
-	$(CC) $(CFLAGS) -c $< -o $@
-raw_sock.o:raw_sock.c
-	$(CC) $(CFLAGS) -c $< -o $@
-inet_sock.o:inet_sock.c
-	$(CC) $(CFLAGS) -c $< -o $@
+%.o:%.c
+	@echo " [CC] $(SUBDIR)/$@"
+	$(Q)$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
 	rm -f *.o

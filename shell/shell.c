@@ -265,10 +265,3 @@ void shell_master(char *prompt_str)
 	}
 }
 
-#ifdef TEST_SHELL
-int main(int argc, char **argv)
-{
-	test_shell("[test]");
-	return 0;
-}
-#endif
