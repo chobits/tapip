@@ -60,9 +60,9 @@ void ip_send_out(struct pkbuf *pkb)
 	ip_set_checksum(iphdr);
 	ipdbg(IPFMT " -> " IPFMT "(%d/%d bytes)",
 			ipfmt(iphdr->ip_src), ipfmt(iphdr->ip_dst),
-			iphlen(iphdr), ntohs(iphdr->ip_len));
+			iphlen(iphdr), _ntohs(iphdr->ip_len));
 	/* ip fragment */
-	if (ntohs(iphdr->ip_len) > pkb->pk_rtdst->rt_dev->net_mtu)
+	if (_ntohs(iphdr->ip_len) > pkb->pk_rtdst->rt_dev->net_mtu)
 		ip_send_frag(pkb->pk_rtdst->rt_dev, pkb);
 	else
 		ip_send_dev(pkb->pk_rtdst->rt_dev, pkb);
@@ -77,8 +77,8 @@ void ip_send_info(struct pkbuf *pkb, unsigned char tos, unsigned short len,
 	iphdr->ip_ver = IP_VERSION_4;
 	iphdr->ip_hlen = IP_HRD_SZ / 4;
 	iphdr->ip_tos = tos;
-	iphdr->ip_len = htons(len);
-	iphdr->ip_id = htons(ipid++);
+	iphdr->ip_len = _htons(len);
+	iphdr->ip_id = _htons(ipid++);
 	iphdr->ip_fragoff = 0;
 	iphdr->ip_ttl = ttl;
 	iphdr->ip_pro = pro;

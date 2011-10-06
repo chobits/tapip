@@ -12,7 +12,7 @@ static _inline unsigned int sum(unsigned short *data, int size,
 		size -= 2;
 	}
 	if (size)
-		origsum += ntohs(((*(unsigned char *)data) & 0xff) << 8);
+		origsum += _ntohs(((*(unsigned char *)data) & 0xff) << 8);
 	return origsum;
 }
 
@@ -40,7 +40,7 @@ static _inline unsigned short tcp_udp_chksum(unsigned int src, unsigned int dst,
 {
 	unsigned int sum;
 	/* caculate sum of tcp pseudo header */
-	sum = htons(proto) + htons(len);
+	sum = _htons(proto) + _htons(len);
 	sum += src;	/* checksum will move high short to low short */
 	sum += dst;
 	/* caculate sum of tcp data(tcp head and data) */
@@ -63,7 +63,7 @@ void udp_set_checksum(struct ip *iphdr, struct udp *udphdr)
 {
 	udphdr->checksum = 0;
 	udphdr->checksum = tcp_udp_chksum(iphdr->ip_src, iphdr->ip_dst,
-		IP_P_UDP, ntohs(udphdr->length), (unsigned short *)udphdr);
+		IP_P_UDP, _ntohs(udphdr->length), (unsigned short *)udphdr);
 	/*
 	 * 0 is for no checksum
 	 * So use 0xffff instead of 0xffff,

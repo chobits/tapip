@@ -71,7 +71,7 @@ void netdev_tx(struct netdev *dev, struct pkbuf *pkb, int len,
 	struct ether *ehdr = (struct ether *)pkb->pk_data;
 
 	/* first copy to eth_dst, maybe eth_src will be copied to eth_dst */
-	ehdr->eth_pro = htons(proto);
+	ehdr->eth_pro = _htons(proto);
 	hwacpy(ehdr->eth_dst, dst);
 	hwacpy(ehdr->eth_src, dev->net_hwaddr);
 

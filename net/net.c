@@ -34,7 +34,7 @@ static struct ether *eth_init(struct netdev *dev, struct pkbuf *pkb)
 			pkb->pk_type = PKT_OTHERHOST;
 	}
 	/* packet protocol */
-	pkb->pk_pro = ntohs(ehdr->eth_pro);
+	pkb->pk_pro = _ntohs(ehdr->eth_pro);
 	return ehdr;
 }
 

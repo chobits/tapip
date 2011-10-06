@@ -47,7 +47,7 @@ struct ip {
 #define ipver(ip) ((ip)->ip_ver)
 #define iphlen(ip) ((ip)->ip_hlen << 2)
 #define ipdlen(ip) ((ip)->ip_len - iphlen(iphdr))
-#define ipndlen(nip) (ntohs((nip)->ip_len) - iphlen(nip))
+#define ipndlen(nip) (_ntohs((nip)->ip_len) - iphlen(nip))
 #define ipdata(ip) ((unsigned char *)(ip) + iphlen(ip))
 #define ipoff(ip) ((((ip)->ip_fragoff) & IP_FRAG_OFF) * 8)
 #define pkb2ip(pkb) ((struct ip *)((pkb)->pk_data + ETH_HRD_SZ))
@@ -58,9 +58,9 @@ struct ip {
 
 static inline void ip_ntoh(struct ip *iphdr)
 {
-        iphdr->ip_len = ntohs(iphdr->ip_len);
-        iphdr->ip_id = ntohs(iphdr->ip_id);
-        iphdr->ip_fragoff = ntohs(iphdr->ip_fragoff);
+        iphdr->ip_len = _ntohs(iphdr->ip_len);
+        iphdr->ip_id = _ntohs(iphdr->ip_id);
+        iphdr->ip_fragoff = _ntohs(iphdr->ip_fragoff);
 }
 #define ip_hton(ip) ip_ntoh(ip)
 

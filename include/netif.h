@@ -69,20 +69,20 @@ struct pkbuf {
 #define HOST_LITTLE_ENDIAN	/* default: little endian machine */
 #ifdef HOST_LITTLE_ENDIAN
 
-static _inline unsigned short htons(unsigned short host)
+static _inline unsigned short _htons(unsigned short host)
 {
 	return (host >> 8) | ((host << 8) & 0xff00);
 }
-#define ntohs(net) htons(net)
+#define _ntohs(net) _htons(net)
 
-static _inline unsigned int htonl(unsigned int host)
+static _inline unsigned int _htonl(unsigned int host)
 {
 	return ((host & 0x000000ff) << 24) |
 		((host & 0x0000ff00) << 8) |
 		((host & 0x00ff0000) >> 8) |
 		((host & 0xff000000) >> 24);
 }
-#define ntohl(net) htonl(net)
+#define _ntohl(net) _htonl(net)
 
 #endif	/* HOST_LITTLE_ENDIAN */
 

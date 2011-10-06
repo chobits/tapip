@@ -20,7 +20,7 @@ void ip_forward(struct pkbuf *pkb)
 #endif
 	ipdbg(IPFMT " -> " IPFMT "(%d/%d bytes) forwarding",
 				ipfmt(iphdr->ip_src), ipfmt(iphdr->ip_dst),
-				iphlen(iphdr), ntohs(iphdr->ip_len));
+				iphlen(iphdr), _ntohs(iphdr->ip_len));
 
 	if (iphdr->ip_ttl <= 1) {
 		icmp_send(ICMP_T_TIMEEXCEED, ICMP_EXC_TTL, 0, pkb);
@@ -57,8 +57,8 @@ void ip_forward(struct pkbuf *pkb)
 		}
 	}
 	/* ip fragment */
-	if (ntohs(iphdr->ip_len) > rt->rt_dev->net_mtu) {
-		if (iphdr->ip_fragoff & htons(IP_FRAG_DF)) {
+	if (_ntohs(iphdr->ip_len) > rt->rt_dev->net_mtu) {
+		if (iphdr->ip_fragoff & _htons(IP_FRAG_DF)) {
 			icmp_send(ICMP_T_DESTUNREACH, ICMP_FRAG_NEEDED, 0, pkb);
 			goto drop_pkb;
 		}

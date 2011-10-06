@@ -62,9 +62,9 @@ struct arp {
 
 static inline void arp_hton(struct arp *ahdr)
 {
-	ahdr->arp_hrd = htons(ahdr->arp_hrd);
-	ahdr->arp_pro = htons(ahdr->arp_pro);
-	ahdr->arp_op = htons(ahdr->arp_op);
+	ahdr->arp_hrd = _htons(ahdr->arp_hrd);
+	ahdr->arp_pro = _htons(ahdr->arp_pro);
+	ahdr->arp_op = _htons(ahdr->arp_op);
 }
 #define arp_ntoh(ahdr) arp_hton(ahdr)
 

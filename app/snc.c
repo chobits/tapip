@@ -134,7 +134,7 @@ static void recv_tcp_packet(void)
 		return;
 	}
 	debug("Three-way handshake successes: from "IPFMT":%d\n",
-			ipfmt(skaddr.src_addr), ntohs(skaddr.src_port));
+			ipfmt(skaddr.src_addr), _ntohs(skaddr.src_port));
 	debug("starting _read()...");
 	while ((len = _read(csock, buf, 512)) > 0) {
 		printf("%.*s", len, buf);
@@ -161,9 +161,9 @@ static void recv_udp_packet(void)
 		udphdr = ip2udp(iphdr);
 		debug("ip: %d bytes from " IPFMT ":%d", ipdlen(iphdr),
 						ipfmt(iphdr->ip_src),
-						ntohs(udphdr->src));
+						_ntohs(udphdr->src));
 		/* output stdin */
-		len = ntohs(udphdr->length) - UDP_HRD_SZ;
+		len = _ntohs(udphdr->length) - UDP_HRD_SZ;
 		if (write(1, udphdr->data, len) != len) {
 			perror("write");
 			free_pkb(pkb);
@@ -180,7 +180,7 @@ static void recv_packet(void)
 			return;
 	}
 	debug("bind " IPFMT ":%d", ipfmt(sock->sk->sk_saddr),
-					ntohs(sock->sk->sk_sport));
+					_ntohs(sock->sk->sk_sport));
 
 	if (flags & F_UDP)
 		recv_udp_packet();

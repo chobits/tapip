@@ -12,8 +12,8 @@ static int tcp_init_pkb(struct tcp_sock *tsk, struct pkbuf *pkb,
 	iphdr->ip_hlen = IP_HRD_SZ >> 2;
 	iphdr->ip_ver = IP_VERSION_4;
 	iphdr->ip_tos = 0;
-	iphdr->ip_len = htons(pkb->pk_len - ETH_HRD_SZ);
-	iphdr->ip_id = htons(tcp_id);
+	iphdr->ip_len = _htons(pkb->pk_len - ETH_HRD_SZ);
+	iphdr->ip_id = _htons(tcp_id);
 	iphdr->ip_fragoff = 0;
 	iphdr->ip_ttl = TCP_DEFAULT_TTL;
 	iphdr->ip_pro = IP_P_TCP;
@@ -80,14 +80,14 @@ void tcp_send_reset(struct tcp_sock *tsk, struct tcp_segment *seg)
 		 */
 		otcp->seq = tcphdr->ackn;
 	} else {
-		otcp->ackn = htonl(seg->seq + seg->len);
+		otcp->ackn = _htonl(seg->seq + seg->len);
 		otcp->ack = 1;
 	}
 	otcp->doff = TCP_HRD_DOFF;
 	otcp->rst = 1;
 	tcpdbg("send RESET from "IPFMT":%d to "IPFMT":%d",
-			ipfmt(seg->iphdr->ip_dst), ntohs(otcp->src),
-			ipfmt(seg->iphdr->ip_src), ntohs(otcp->dst));
+			ipfmt(seg->iphdr->ip_dst), _ntohs(otcp->src),
+			ipfmt(seg->iphdr->ip_src), _ntohs(otcp->dst));
 	tcp_send_out(NULL, opkb, seg);
 }
 
@@ -122,13 +122,13 @@ void tcp_send_ack(struct tcp_sock *tsk, struct tcp_segment *seg)
 	otcp->src = tcphdr->dst;
 	otcp->dst = tcphdr->src;
 	otcp->doff = TCP_HRD_DOFF;
-	otcp->seq = htonl(tsk->snd_nxt);
-	otcp->ackn = htonl(tsk->rcv_nxt);
+	otcp->seq = _htonl(tsk->snd_nxt);
+	otcp->ackn = _htonl(tsk->rcv_nxt);
 	otcp->ack = 1;
-	otcp->window = htons(tsk->rcv_wnd);
+	otcp->window = _htons(tsk->rcv_wnd);
 	tcpdbg("send ACK(%u) [WIN %d] to "IPFMT":%d",
-			ntohl(otcp->ackn), ntohs(otcp->window),
-			ipfmt(seg->iphdr->ip_src), ntohs(otcp->dst));
+			_ntohl(otcp->ackn), _ntohs(otcp->window),
+			ipfmt(seg->iphdr->ip_src), _ntohs(otcp->dst));
 	tcp_send_out(tsk, opkb, seg);
 }
 
@@ -152,15 +152,15 @@ void tcp_send_synack(struct tcp_sock *tsk, struct tcp_segment *seg)
 	otcp->src = tcphdr->dst;
 	otcp->dst = tcphdr->src;
 	otcp->doff = TCP_HRD_DOFF;
-	otcp->seq = htonl(tsk->iss);
-	otcp->ackn = htonl(tsk->rcv_nxt);
+	otcp->seq = _htonl(tsk->iss);
+	otcp->ackn = _htonl(tsk->rcv_nxt);
 	otcp->syn = 1;
 	otcp->ack = 1;
-	otcp->window = htons(tsk->rcv_wnd);
+	otcp->window = _htons(tsk->rcv_wnd);
 	tcpdbg("send SYN(%u)/ACK(%u) [WIN %d] to "IPFMT":%d",
-			ntohl(otcp->seq), ntohs(otcp->window),
-			ntohl(otcp->ackn), ipfmt(seg->iphdr->ip_dst),
-			ntohs(otcp->dst));
+			_ntohl(otcp->seq), _ntohs(otcp->window),
+			_ntohl(otcp->ackn), ipfmt(seg->iphdr->ip_dst),
+			_ntohs(otcp->dst));
 	tcp_send_out(tsk, opkb, seg);
 }
 
@@ -178,12 +178,12 @@ void tcp_send_syn(struct tcp_sock *tsk, struct tcp_segment *seg)
 	otcp->src = tsk->sk.sk_sport;
 	otcp->dst = tsk->sk.sk_dport;
 	otcp->doff = TCP_HRD_DOFF;
-	otcp->seq = htonl(tsk->iss);
+	otcp->seq = _htonl(tsk->iss);
 	otcp->syn = 1;
-	otcp->window = htons(tsk->rcv_wnd);
+	otcp->window = _htons(tsk->rcv_wnd);
 	tcpdbg("send SYN(%u) [WIN %d] to "IPFMT":%d",
-			ntohl(otcp->seq), ntohs(otcp->window),
-			ipfmt(tsk->sk.sk_daddr), ntohs(otcp->dst));
+			_ntohl(otcp->seq), _ntohs(otcp->window),
+			ipfmt(tsk->sk.sk_daddr), _ntohs(otcp->dst));
 	tcp_send_out(tsk, opkb, seg);
 }
 
@@ -198,19 +198,19 @@ void tcp_send_fin(struct tcp_sock *tsk)
 	otcp->src = tsk->sk.sk_sport;
 	otcp->dst = tsk->sk.sk_dport;
 	otcp->doff = TCP_HRD_DOFF;
-	otcp->seq = htonl(tsk->snd_nxt);
-	otcp->window = htons(tsk->rcv_wnd);
+	otcp->seq = _htonl(tsk->snd_nxt);
+	otcp->window = _htons(tsk->rcv_wnd);
 	otcp->fin = 1;
 	/*
 	 * Should we send an ACK?
 	 * Yes, tcp stack will drop packet if it has no ACK bit
 	 * according to RFC 793 #SEGMENT RECEIVE
 	 */
-	otcp->ackn = htonl(tsk->rcv_nxt);
+	otcp->ackn = _htonl(tsk->rcv_nxt);
 	otcp->ack = 1;
 	tcpdbg("send FIN(%u)/ACK(%u) [WIN %d] to "IPFMT":%d",
-			ntohl(otcp->seq), ntohl(otcp->ackn),
-			ntohs(otcp->window), ipfmt(tsk->sk.sk_daddr),
-			ntohs(otcp->dst));
+			_ntohl(otcp->seq), _ntohl(otcp->ackn),
+			_ntohs(otcp->window), ipfmt(tsk->sk.sk_daddr),
+			_ntohs(otcp->dst));
 	tcp_send_out(tsk, opkb, NULL);
 }

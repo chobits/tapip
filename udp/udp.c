@@ -30,13 +30,13 @@ void udp_in(struct pkbuf *pkb)
 	struct udp *udphdr = ip2udp(iphdr);
 	int udplen = ipdlen(iphdr);
 
-	if (udplen < UDP_HRD_SZ || udplen < ntohs(udphdr->length)) {
+	if (udplen < UDP_HRD_SZ || udplen < _ntohs(udphdr->length)) {
 		udpdbg("udp length is too small");
 		goto drop_pkb;
 	}
 	/* Maybe ip data has pad bytes. */
-	if (udplen > ntohs(udphdr->length))
-		udplen = ntohs(udphdr->length);
+	if (udplen > _ntohs(udphdr->length))
+		udplen = _ntohs(udphdr->length);
 	if (udphdr->checksum && udp_chksum(iphdr->ip_src, iphdr->ip_dst,
 				udplen, (unsigned short *)udphdr) != 0) {
 		udpdbg("udp packet checksum corrupts");
@@ -48,8 +48,8 @@ void udp_in(struct pkbuf *pkb)
 	 */
 
 	udpdbg("from "IPFMT":%d" " to " IPFMT ":%d",
-			ipfmt(iphdr->ip_src), ntohs(udphdr->src),
-			ipfmt(iphdr->ip_dst), ntohs(udphdr->dst));
+			ipfmt(iphdr->ip_src), _ntohs(udphdr->src),
+			ipfmt(iphdr->ip_dst), _ntohs(udphdr->dst));
 	udp_recv(pkb, iphdr, udphdr);
 	return;
 drop_pkb:

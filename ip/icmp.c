@@ -123,8 +123,8 @@ static void icmp_echo_reply(struct icmp_desc *icmp_desc, struct pkbuf *pkb)
 	struct icmp *icmphdr = ip2icmp(iphdr);
 	icmpdbg("from "IPFMT" id %d seq %d ttl %d",
 			ipfmt(iphdr->ip_src),
-			ntohs(icmphdr->icmp_id),
-			ntohs(icmphdr->icmp_seq),
+			_ntohs(icmphdr->icmp_id),
+			_ntohs(icmphdr->icmp_seq),
 			iphdr->ip_ttl);
 	free_pkb(pkb);
 }
@@ -135,8 +135,8 @@ static void icmp_echo_request(struct icmp_desc *icmp_desc, struct pkbuf *pkb)
 	struct icmp *icmphdr = ip2icmp(iphdr);
 	icmpdbg("echo request data %d bytes icmp_id %d icmp_seq %d",
 			iphdr->ip_len - iphlen(iphdr) - ICMP_HRD_SZ,
-			ntohs(icmphdr->icmp_id),
-			ntohs(icmphdr->icmp_seq));
+			_ntohs(icmphdr->icmp_id),
+			_ntohs(icmphdr->icmp_seq));
 	if (icmphdr->icmp_code) {
 		icmpdbg("echo request packet corrupted");
 		free_pkb(pkb);
@@ -211,7 +211,7 @@ void icmp_send(unsigned char type, unsigned char code,
 	struct pkbuf *pkb;
 	struct ip *iphdr = pkb2ip(pkb_in);
 	struct icmp *icmphdr;
-	int paylen = ntohs(iphdr->ip_len);	/* icmp payload length */
+	int paylen = _ntohs(iphdr->ip_len);	/* icmp payload length */
 	if (paylen < iphlen(iphdr) + 8)
 		return;
 	/*
@@ -229,7 +229,7 @@ void icmp_send(unsigned char type, unsigned char code,
 		return;
 	if (MULTICAST(iphdr->ip_dst) || BROADCAST(iphdr->ip_dst))
 		return;
-	if (iphdr->ip_fragoff & htons(IP_FRAG_OFF))
+	if (iphdr->ip_fragoff & _htons(IP_FRAG_OFF))
 		return;
 
 	if (icmp_type_error(type) && iphdr->ip_pro == IP_P_ICMP) {

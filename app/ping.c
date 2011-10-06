@@ -136,8 +136,8 @@ static void send_packet(void)
 	memset(icmphdr->icmp_data, 'x', size);
 	icmphdr->icmp_type = ICMP_T_ECHOREQ;
 	icmphdr->icmp_code = 0;
-	icmphdr->icmp_id = htons(id);
-	icmphdr->icmp_seq = htons(seq);
+	icmphdr->icmp_id = _htons(id);
+	icmphdr->icmp_seq = _htons(seq);
 	icmphdr->icmp_cksum = 0;
 	icmphdr->icmp_cksum = icmp_chksum((unsigned short *)icmphdr,
 			ICMP_HRD_SZ + size);
@@ -188,12 +188,12 @@ static void recv_packet(void)
 		iphdr = pkb2ip(pkb);
 		icmphdr = ip2icmp(iphdr);
 		if (iphdr->ip_pro == IP_P_ICMP &&
-			ntohs(icmphdr->icmp_id) == id &&
+			_ntohs(icmphdr->icmp_id) == id &&
 			icmphdr->icmp_type == ICMP_T_ECHORLY) {
 			recv--;
 			printf("%d bytes from " IPFMT ": icmp_seq=%d ttl=%d\n",
 				ipdlen(iphdr), ipfmt(iphdr->ip_src),
-				ntohs(icmphdr->icmp_seq), iphdr->ip_ttl);
+				_ntohs(icmphdr->icmp_seq), iphdr->ip_ttl);
 			precv++;
 		}
 		free_pkb(pkb);

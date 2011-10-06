@@ -40,8 +40,8 @@ static void raw_init_pkb(struct sock *sk, struct pkbuf *pkb,
 	iphdr->ip_hlen = IP_HRD_SZ >> 2;
 	iphdr->ip_ver = IP_VERSION_4;
 	iphdr->ip_tos = 0;
-	iphdr->ip_len = htons(pkb->pk_len - ETH_HRD_SZ);
-	iphdr->ip_id = htons(raw_id);
+	iphdr->ip_len = _htons(pkb->pk_len - ETH_HRD_SZ);
+	iphdr->ip_id = _htons(raw_id);
 	iphdr->ip_fragoff = 0;
 	iphdr->ip_ttl = RAW_DEFAULT_TTL;
 	iphdr->ip_pro = sk->protocol;

@@ -54,7 +54,7 @@ static _inline int __port_used(unsigned short port, struct hlist_head *head)
 	struct hlist_node *node;
 	struct sock *sk;
 	hlist_for_each_sock(sk, node, head)
-		if (sk->sk_sport == htons(port))
+		if (sk->sk_sport == _htons(port))
 			return 1;
 	return 0;
 }
@@ -146,7 +146,7 @@ static unsigned short udp_get_port(void)
 			}
 		}
 	}
-	return htons(port);
+	return _htons(port);
 }
 
 static int udp_set_sport(struct sock *sk, unsigned short nport)
@@ -159,13 +159,13 @@ static int udp_set_sport(struct sock *sk, unsigned short nport)
 	 *  1. check used port
 	 *  2. select a number automatically and check it
 	 */
-	if ((nport && port_used(ntohs(nport))) ||
+	if ((nport && port_used(_ntohs(nport))) ||
 		(!nport && !(nport = udp_get_port())))
 		goto unlock;
 
 	err = 0;
 	/* update best slot */
-	hash = ntohs(nport) & UDP_HASH_MASK;
+	hash = _ntohs(nport) & UDP_HASH_MASK;
 	udp_update_best(hash);
 
 	/* add sock int udp hash table */
@@ -214,8 +214,8 @@ static int udp_init_pkb(struct sock *sk, struct pkbuf *pkb,
 	iphdr->ip_hlen = IP_HRD_SZ >> 2;
 	iphdr->ip_ver = IP_VERSION_4;
 	iphdr->ip_tos = 0;
-	iphdr->ip_len = htons(pkb->pk_len - ETH_HRD_SZ);
-	iphdr->ip_id = htons(udp_id);
+	iphdr->ip_len = _htons(pkb->pk_len - ETH_HRD_SZ);
+	iphdr->ip_id = _htons(udp_id);
 	iphdr->ip_fragoff = 0;
 	iphdr->ip_ttl = UDP_DEFAULT_TTL;
 	iphdr->ip_pro = sk->protocol;	/* IP_P_UDP */
@@ -226,11 +226,11 @@ static int udp_init_pkb(struct sock *sk, struct pkbuf *pkb,
 	/* fill udp */
 	udphdr->src = sk->sk_sport;	/* bound local address */
 	udphdr->dst = skaddr->dst_port;
-	udphdr->length = htons(size + UDP_HRD_SZ);
+	udphdr->length = _htons(size + UDP_HRD_SZ);
 	memcpy(udphdr->data, buf, size);
 	udpdbg(IPFMT":%d" "->" IPFMT":%d(proto %d)",
-			ipfmt(iphdr->ip_src), ntohs(udphdr->src),
-			ipfmt(iphdr->ip_dst), ntohs(udphdr->dst),
+			ipfmt(iphdr->ip_src), _ntohs(udphdr->src),
+			ipfmt(iphdr->ip_dst), _ntohs(udphdr->dst),
 			iphdr->ip_pro);
 	udp_set_checksum(iphdr, udphdr);
 	return 0;
@@ -282,7 +282,7 @@ static struct sock_ops udp_ops = {
 /* @nport: net order port */
 struct sock *udp_lookup_sock(unsigned short nport)
 {
-	struct hlist_head *head = udp_slot_head(ntohs(nport));
+	struct hlist_head *head = udp_slot_head(_ntohs(nport));
 	struct hlist_node *node;
 	struct sock *sk;
 	/* FIXME: lock for udp hash table */

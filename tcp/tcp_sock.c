@@ -26,7 +26,7 @@ static struct sock *tcp_lookup_sock_establish(unsigned int src, unsigned int dst
 
 static struct sock *tcp_lookup_sock_listen(unsigned int addr, unsigned int nport)
 {
-	struct hlist_head *head = tcp_lhash_head(ntohs(nport) & TCP_LHASH_MASK);
+	struct hlist_head *head = tcp_lhash_head(_ntohs(nport) & TCP_LHASH_MASK);
 	struct hlist_node *node;
 	struct sock *sk;
 
@@ -62,7 +62,7 @@ static _inline int __tcp_port_used(unsigned short nport, struct hlist_head *head
 static _inline int tcp_port_used(unsigned short nport)
 {
 	return __tcp_port_used(nport,
-		tcp_bhash_head(ntohs(nport) & TCP_BHASH_MASK));
+		tcp_bhash_head(_ntohs(nport) & TCP_BHASH_MASK));
 }
 
 static unsigned short tcp_get_port(void)
@@ -73,11 +73,11 @@ static unsigned short tcp_get_port(void)
 	if (tcp_table.bfree <= 0)
 		return 0;
 	/* assert that we can break the loop */
-	while (tcp_port_used(htons(defport))) {
+	while (tcp_port_used(_htons(defport))) {
 		if (++defport > TCP_BPORT_MAX)
 			defport = TCP_BPORT_MIN;
 	}
-	nport = htons(defport);
+	nport = _htons(defport);
 	if (++defport > TCP_BPORT_MAX)
 		defport = TCP_BPORT_MIN;
 	return nport;
@@ -98,7 +98,7 @@ static int tcp_set_sport(struct sock *sk, unsigned short nport)
 		goto out;
 	tcp_table.bfree--;
 	sk->sk_sport = nport;
-	tcpsk(sk)->bhash = ntohs(nport) & TCP_BHASH_MASK;
+	tcpsk(sk)->bhash = _ntohs(nport) & TCP_BHASH_MASK;
 	tcp_bhash(tcpsk(sk));
 	err = 0;
 out:
@@ -128,7 +128,7 @@ int tcp_hash(struct sock *sk)
 	if (tsk->state == TCP_CLOSED)
 		return -1;
 	if (tsk->state == TCP_LISTEN) {
-		sk->hash = ntohs(sk->sk_sport) & TCP_LHASH_MASK;
+		sk->hash = _ntohs(sk->sk_sport) & TCP_LHASH_MASK;
 		head = tcp_lhash_head(sk->hash);
 		/*
 		 * We dont need to check conflict of listen hash

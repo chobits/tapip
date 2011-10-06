@@ -108,8 +108,8 @@ static void send_packet(void)
 	memset(icmphdr->icmp_data, 'x', size);
 	icmphdr->icmp_type = ICMP_T_ECHOREQ;
 	icmphdr->icmp_code = 0;
-	icmphdr->icmp_id = htons(id);
-	icmphdr->icmp_seq = htons(++seq);
+	icmphdr->icmp_id = _htons(id);
+	icmphdr->icmp_seq = _htons(++seq);
 	icmphdr->icmp_cksum = 0;
 	icmphdr->icmp_cksum = icmp_chksum((unsigned short *)icmphdr,
 			ICMP_HRD_SZ + size);
@@ -117,7 +117,7 @@ static void send_packet(void)
 			ipfmt(veth->net_ipaddr),
 			ipfmt(ipaddr),
 			id,
-			ntohs(icmphdr->icmp_seq),
+			_ntohs(icmphdr->icmp_seq),
 			ttl);
 	ip_send_info(pkb, 0, IP_HRD_SZ + ICMP_HRD_SZ + size,
 			ttl, IP_P_ICMP, ipaddr);

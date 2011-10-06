@@ -59,7 +59,7 @@ int parse_ip_port(char *str, unsigned int *addr, unsigned short *nport)
 {
 	char *port;
 	if ((port = strchr(str, ':')) != NULL) {
-		*nport = htons(atoi(&port[1]));
+		*nport = _htons(atoi(&port[1]));
 		*port = '\0';
 	}
 	if (str2ip(str, addr) < 0)

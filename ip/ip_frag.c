@@ -234,9 +234,9 @@ struct pkbuf *ip_frag(struct pkbuf *pkb, struct ip *orig, int hlen,
 	/* copy data */
 	memcpy((void *)fraghdr + hlen, (void *)orig + hlen + off, dlen);
 	/* adjacent the head */
-	fraghdr->ip_len = htons(hlen + dlen);
+	fraghdr->ip_len = _htons(hlen + dlen);
 	mf_bit |= (off >> 3);
-	fraghdr->ip_fragoff = htons(mf_bit);
+	fraghdr->ip_fragoff = _htons(mf_bit);
 	ip_set_checksum(fraghdr);
 	return fragpkb;
 }
@@ -249,7 +249,7 @@ void ip_send_frag(struct netdev *dev, struct pkbuf *pkb)
 
 	iphdr = pkb2ip(pkb);
 	hlen = iphlen(iphdr);
-	dlen = ntohs(iphdr->ip_len) - hlen;
+	dlen = _ntohs(iphdr->ip_len) - hlen;
 	mlen = (dev->net_mtu - hlen) & ~7;	/* max length */
 	off = 0;
 	while (dlen > mlen) {

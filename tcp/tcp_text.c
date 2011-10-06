@@ -49,16 +49,16 @@ static void tcp_init_text(struct tcp_sock *tsk, struct pkbuf *pkb,
 	tcphdr->src = tsk->sk.sk_sport;
 	tcphdr->dst = tsk->sk.sk_dport;
 	tcphdr->doff = TCP_HRD_DOFF;
-	tcphdr->seq = htonl(tsk->snd_nxt);
-	tcphdr->ackn = htonl(tsk->rcv_nxt);
+	tcphdr->seq = _htonl(tsk->snd_nxt);
+	tcphdr->ackn = _htonl(tsk->rcv_nxt);
 	tcphdr->ack = 1;
-	tcphdr->window = htons(tsk->rcv_wnd);
+	tcphdr->window = _htons(tsk->rcv_wnd);
 	memcpy(tcphdr->data, buf, size);
 	tsk->snd_nxt += size;
 	tsk->snd_wnd -= size;
 	tcpsdbg("send TEXT(%u:%d) [WIN %d] to "IPFMT":%d",
-			ntohl(tcphdr->seq), size, ntohs(tcphdr->window),
-			ipfmt(tsk->sk.sk_daddr), ntohs(tcphdr->dst));
+			_ntohl(tcphdr->seq), size, _ntohs(tcphdr->window),
+			ipfmt(tsk->sk.sk_daddr), _ntohs(tcphdr->dst));
 }
 
 int tcp_send_text(struct tcp_sock *tsk, void *buf, int len)

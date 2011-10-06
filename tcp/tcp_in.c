@@ -40,15 +40,15 @@ static char *tcp_control_string(struct tcp *tcphdr)
 
 static void tcp_segment_init(struct tcp_segment *seg, struct ip *iphdr, struct tcp *tcphdr)
 {
-	seg->seq = ntohl(tcphdr->seq);
+	seg->seq = _ntohl(tcphdr->seq);
 	seg->dlen = ipdlen(iphdr) - tcphlen(tcphdr);
 	seg->len = seg->dlen + tcphdr->syn + tcphdr->fin;
 	seg->text = tcptext(tcphdr);
 	/* if len is 0, fix lastseq to seq */
 	seg->lastseq = seg->len ? (seg->seq + seg->len - 1) : seg->seq;
-	seg->ack = tcphdr->ack ? ntohl(tcphdr->ackn) : 0;
-	seg->wnd = ntohs(tcphdr->window);
-	seg->up = ntohs(tcphdr->urgptr);
+	seg->ack = tcphdr->ack ? _ntohl(tcphdr->ackn) : 0;
+	seg->wnd = _ntohs(tcphdr->window);
+	seg->up = _ntohs(tcphdr->urgptr);
 	/* precedence value is not used */
 	seg->prc = 0;
 	seg->iphdr = iphdr;
@@ -56,10 +56,10 @@ static void tcp_segment_init(struct tcp_segment *seg, struct ip *iphdr, struct t
 
 	tcpdbg("from "IPFMT":%d" " to " IPFMT ":%d"
 		"\tseq:%u(%d:%d) ack:%u %s",
-			ipfmt(iphdr->ip_src), ntohs(tcphdr->src),
-			ipfmt(iphdr->ip_dst), ntohs(tcphdr->dst),
-			ntohl(tcphdr->seq), seg->dlen, seg->len,
-			ntohl(tcphdr->ackn), tcp_control_string(tcphdr));
+			ipfmt(iphdr->ip_src), _ntohs(tcphdr->src),
+			ipfmt(iphdr->ip_dst), _ntohs(tcphdr->dst),
+			_ntohl(tcphdr->seq), seg->dlen, seg->len,
+			_ntohl(tcphdr->ackn), tcp_control_string(tcphdr));
 }
 
 static void tcp_recv(struct pkbuf *pkb, struct ip *iphdr, struct tcp *tcphdr)

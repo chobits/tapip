@@ -15,11 +15,11 @@ void arp_request(struct arpentry *ae)
 	ehdr = (struct ether *)pkb->pk_data;
 	ahdr = (struct arp *)ehdr->eth_data;
 	/* normal arp information */
-	ahdr->arp_hrd = htons(ARP_HRD_ETHER);
-	ahdr->arp_pro = htons(ETH_P_IP);
+	ahdr->arp_hrd = _htons(ARP_HRD_ETHER);
+	ahdr->arp_pro = _htons(ETH_P_IP);
 	ahdr->arp_hrdlen = ETH_ALEN;
 	ahdr->arp_prolen = IP_ALEN;
-	ahdr->arp_op = htons(ARP_OP_REQUEST);
+	ahdr->arp_op = _htons(ARP_OP_REQUEST);
 	/* address */
 	ahdr->arp_sip = ae->ae_dev->net_ipaddr;
 	hwacpy(ahdr->arp_sha, ae->ae_dev->net_hwaddr);
