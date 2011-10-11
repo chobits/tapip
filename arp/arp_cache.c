@@ -8,46 +8,22 @@
 #define arp_cache_end (&arp_cache[ARP_CACHE_SZ])
 static struct arpentry arp_cache[ARP_CACHE_SZ];
 
-#ifdef LOCK_SEM
-
-#include <semaphore.h>
-static sem_t arp_cache_sem;	/* arp cache lock */
-static _inline void arp_cache_lock_init(void)
-{
-	if (sem_init(&arp_cache_sem, 0, 1) == -1)
-		perrx("sem_init");
-}
-
-#ifdef DEBUG_ARPCACHE_LOCK
-#define arp_cache_lock() do { dbg("lock"); sem_wait(&arp_cache_sem); } while(0)
-#define arp_cache_unlock() do { dbg("unlock"); sem_post(&arp_cache_sem); } while(0)
-#else	/* !DEBUG_ARPCACHE_LOCK */
-static _inline void arp_cache_lock(void)
-{
-	sem_wait(&arp_cache_sem);
-}
-
-static _inline void arp_cache_unlock(void)
-{
-	sem_post(&arp_cache_sem);
-}
-#endif	/* end DEBUG_ARPCACHE_LOCK */
-
-#else	/* !DEBUG_SEM */
-
-/* It is evil to init pthread mutex dynamically X< */
+/* Lock Definition */
 #ifdef STATIC_MUTEX
 pthread_mutex_t arp_cache_mutex = PTHREAD_MUTEX_INITIALIZER;
 #else
 pthread_mutex_t arp_cache_mutex;
+/* Why are they not defined in pthread.h? */
 #ifndef PTHREAD_MUTEX_NORMAL
 #define	PTHREAD_MUTEX_NORMAL PTHREAD_MUTEX_TIMED_NP
 #endif
+#endif	/* STATIC_MUTEX */
 
-#endif
+/* Lock Init */
 static _inline void arp_cache_lock_init(void)
 {
 #ifndef STATIC_MUTEX
+	/* It is evil to init pthread mutex dynamically X< */
 	pthread_mutexattr_t attr;
 	if (pthread_mutexattr_init(&attr) != 0)
 		perrx("pthread_mutexattr_init");
@@ -58,6 +34,7 @@ static _inline void arp_cache_lock_init(void)
 #endif
 }
 
+/* Lock Function */
 #ifdef DEBUG_ARPCACHE_LOCK
 #define arp_cache_lock() do { dbg("lock"); pthread_mutex_lock(&arp_cache_mutex); } while(0)
 #define arp_cache_unlock() do { dbg("unlock"); pthread_mutex_unlock(&arp_cache_mutex); } while(0)
@@ -72,7 +49,6 @@ static _inline void arp_cache_unlock(void)
 	pthread_mutex_unlock(&arp_cache_mutex);
 }
 #endif	/* end DEBUG_ARPCACHE_LOCK */
-#endif	/* end LOCK_SEM */
 
 void arp_queue_send(struct arpentry *ae)
 {
@@ -210,14 +186,14 @@ void arp_cache_init(void)
 	dbg("ARP CACHE SEMAPHORE INIT");
 }
 
-static char *__arpstate[] = {
+static const char *__arpstate[] = {
 	NULL,
 	"Free",
 	"Waiting",
 	"Resolved"
 };
 
-static inline char *arpstate(struct arpentry *ae)
+static _inline const char *arpstate(struct arpentry *ae)
 {
 	return __arpstate[ae->ae_state];
 }
