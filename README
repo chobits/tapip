@@ -26,5 +26,12 @@
   More information for hacking TCP/UDP/IP/ICMP:
     See doc/net_topology, and select a script from doc/test to do.
 
++ Socket Api?
+  _socket,_read,_write,_send,_recv,_connect,_bind,_close and _listen
+   are provided now.
+  Three types socket (SOCK_STREAM, SOCK_DGRAM, SOCK_RAW) can be used.
+  You can use these apis to write applications working on tapip.
+  Good examples are app/ping.c and app/snc.c.
+
 + Author?
   Xiaochen Wang <wangxiaochen0@gmail.com>
