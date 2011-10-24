@@ -25,8 +25,12 @@
  test udp port allocation alogrithm
 
 7.
- multicast/broadcast ip address handle
- ip option handle
+ multicast/broadcast ip address handling
+ ip option handling
 
 8.
  icmp error report to l4(TCP/UDP/RawIP)
+
+9.
+ add cache layer for internal structure
+ (Original memory management using malloc/free is expensive.)
