@@ -79,8 +79,8 @@ struct tcp_sock {
 	struct list_head accept_queue;	/* waiting for third ACK of three-way handshake */
 	struct list_head list;
 	struct tcp_timer timewait;	/* TIME-WAIT TIMEOUT */
-	struct wait *wait_accept;
-	struct wait *wait_connect;
+	struct tapip_wait *wait_accept;
+	struct tapip_wait *wait_connect;
 	struct tcp_sock *parent;
 	unsigned int flags;
 	struct cbuf *rcv_buf;

@@ -234,7 +234,16 @@ static struct sock *tcp_accept(struct sock *sk)
 {
 	struct tcp_sock *tsk = tcpsk(sk);
 	struct tcp_sock *newtsk = NULL;
-
+	/*
+	 * FIXME: thread safe
+	 * If one thread fall into accept waiting queue,
+	 * other threads should wait for it in another
+	 * queue. When the first accepter quit, it should
+	 * wake up others waiting for it.
+	 *
+	 * (Should we fix it? Simulating multi-threads on my _accept()
+	 *  is so difficult, maybe we dont support thread-safe accept.)
+	 */
 	while (list_empty(&tsk->accept_queue)) {
 		if (tcp_wait_accept(tsk) < 0)
 			goto out;

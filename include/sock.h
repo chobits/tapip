@@ -45,7 +45,7 @@ struct sock {
 	 *        just using one mutex?
 	 */
 	struct list_head recv_queue;
-	struct wait *recv_wait;
+	struct tapip_wait *recv_wait;
 	unsigned int hash;	/* hash num for sock hash table lookup */
 	struct hlist_node hash_list;
 	int refcnt;

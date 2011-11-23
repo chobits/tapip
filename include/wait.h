@@ -6,7 +6,7 @@
 #include <pthread.h>
 
 /* simulating thread blocking(used for _accept(), _read(), _recv()) */
-struct wait {
+struct tapip_wait {
 	pthread_mutex_t mutex;
 	pthread_cond_t cond;
 	int notified;		/* log whether wait is waken up already */
@@ -25,9 +25,9 @@ do { \
 	dbg("[*]wake_up " #w); \
 	_wake_up(w); \
 } while (0)
-static _inline int _wake_up(struct wait *w)
+static _inline int _wake_up(struct tapip_wait *w)
 #else
-static _inline int wake_up(struct wait *w)
+static _inline int wake_up(struct tapip_wait *w)
 #endif
 {
 	pthread_mutex_lock(&w->mutex);
@@ -52,9 +52,9 @@ unlock:
 	dbg("[-]Be waken up " #w); \
 	ret; \
 })
-static _inline int _sleep_on(struct wait *w)
+static _inline int _sleep_on(struct tapip_wait *w)
 #else
-static _inline int sleep_on(struct wait *w)
+static _inline int sleep_on(struct tapip_wait *w)
 #endif
 {
 	pthread_mutex_lock(&w->mutex);
@@ -70,7 +70,7 @@ unlock:
 	return -(w->dead);
 }
 
-static _inline void wait_init(struct wait *w)
+static _inline void wait_init(struct tapip_wait *w)
 {
 	/* XXX: Should it need error checking? */
 	pthread_cond_init(&w->cond, NULL);
@@ -80,7 +80,7 @@ static _inline void wait_init(struct wait *w)
 	w->sleep = 0;
 }
 
-static _inline void wait_exit(struct wait *w)
+static _inline void wait_exit(struct tapip_wait *w)
 {
 	pthread_mutex_lock(&w->mutex);
 	if (w->dead)

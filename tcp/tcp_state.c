@@ -72,7 +72,8 @@ static struct tcp_sock *tcp_listen_child_sock(struct tcp_sock *tsk,
 	return get_tcp_sock(newtsk);
 }
 
-static void tcp_listen(struct pkbuf *pkb, struct tcp_segment *seg, struct tcp_sock *tsk)
+static void tcp_listen(struct pkbuf *pkb, struct tcp_segment *seg,
+			struct tcp_sock *tsk)
 {
 	struct tcp_sock *newtsk;
 	struct tcp *tcphdr = seg->tcphdr;
@@ -155,8 +156,9 @@ static void tcp_synsent(struct pkbuf *pkb, struct tcp_segment *seg,
 			goto discarded;
 		}
 		/*
-		 * RFC 793:If SND.UNA =< SEG.ACK =< SND.NXT then the ACK is acceptable.
-		 * (Assert SND.UNA == 0)
+		 * RFC 793:
+		 *   If SND.UNA =< SEG.ACK =< SND.NXT, the ACK is acceptable.
+		 *   (Assert SND.UNA == 0)
 		 */
 	}
 	/* second check the RST bit */
@@ -193,10 +195,12 @@ static void tcp_synsent(struct pkbuf *pkb, struct tcp_segment *seg,
 			tcp_send_ack(tsk, seg);
 			tcpsdbg("Active three-way handshake successes!(SND.WIN:%d)", tsk->snd_wnd);
 			wake_up(tsk->wait_connect);
-			/*Data or controls which were queued for
-			  transmission may be included.  If there are other controls or
-			  text in the segment then continue processing at the sixth step
-			  below where the URG bit is checked, otherwise return.
+			/*
+			 * Data or controls which were queued for transmission
+			 * may be included.  If there are other controls or text
+			 * in the segment then continue processing at the sixth
+			 * step * below where the URG bit is checked, otherwise
+			 * return.
 			 */
 		} else {		/* simultaneous open */
 			/* XXX: test */
@@ -204,7 +208,10 @@ static void tcp_synsent(struct pkbuf *pkb, struct tcp_segment *seg,
 			/* reply SYN+ACK seq=iss,ack=rcv.nxt */
 			tcp_send_synack(tsk, seg);
 			tcpsdbg("Simultaneous open(SYN-SENT => SYN-RECV)");
-			/* queue text or other controls after established state has been reached */
+			/*
+			 * queue text or other controls after established state
+			 * has been reached
+			 */
 			return;
 		}
 	}
@@ -244,18 +251,22 @@ static int seq_check(struct tcp_segment *seg, struct tcp_sock *tsk)
 	/* if len == 0, then lastseq == seq */
 	if (seg->seq < rcv_end && tsk->rcv_nxt <= seg->lastseq)
 		return 0;
-	tcpsdbg("rcvnxt:%u <= seq:%u < rcv_end:%u", tsk->rcv_nxt, seg->seq, rcv_end);
+	tcpsdbg("rcvnxt:%u <= seq:%u < rcv_end:%u",
+		tsk->rcv_nxt, seg->seq, rcv_end);
 	return -1;
 }
 
-static _inline void __tcp_update_window(struct tcp_sock *tsk, struct tcp_segment *seg)
+static _inline void __tcp_update_window(struct tcp_sock *tsk,
+					struct tcp_segment *seg)
 {
-		tsk->snd_wnd = seg->wnd;	/* SND.WND is an offset from SND.UNA */
+		/* SND.WND is an offset from SND.UNA */
+		tsk->snd_wnd = seg->wnd;
 		tsk->snd_wl1 = seg->seq;
 		tsk->snd_wl2 = seg->ack;
 }
 
-static _inline void tcp_update_window(struct tcp_sock *tsk, struct tcp_segment *seg)
+static _inline void tcp_update_window(struct tcp_sock *tsk,
+					struct tcp_segment *seg)
 {
 	if ((tsk->snd_una <= seg->ack && seg->ack <= tsk->snd_nxt) &&
 		(tsk->snd_wl1 < seg->seq ||
@@ -396,9 +407,10 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 				tsk->snd_una, seg->ack, tsk->snd_nxt);
 		if (tsk->snd_una < seg->ack && seg->ack <= tsk->snd_nxt) {
 			tsk->snd_una = seg->ack;
-			/* remove any segments on the restransmission
+			/*
+			 * remove any segments on the restransmission
 			 * queue which are thereby entirely acknowledged
-			 * */
+			 */
 			if (tsk->state == TCP_FIN_WAIT1) {
 				tcp_set_state(tsk, TCP_FIN_WAIT2);
 			} else if (tsk->state == TCP_CLOSING) {
@@ -411,7 +423,7 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 				tcp_unbhash(tsk);
 				goto drop;
 			}
-		} else if (seg->ack > tsk->snd_nxt) {		/* something not yet sent */
+		} else if (seg->ack > tsk->snd_nxt) {	/* something not yet sent */
 			/* reply ACK ack = ? */
 			goto drop;
 		} else if (seg->ack <= tsk->snd_una) {	/* duplicate ACK */
@@ -423,10 +435,11 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 			 * -Yes for linux
 			 * +Yes for tapip
 			 *
-			 * After three-way handshake connection is established, then
-			 * SND.UNA == SND.NXT, which means next remote packet ACK is
-			 * always duplicate. Although this happens frequently, we should
-			 * not view it as an error.
+			 * After three-way handshake connection is established,
+			 * then * SND.UNA == SND.NXT, which means next remote
+			 * packet ACK is * always duplicate. Although this
+			 * happens frequently, we should * not view it as an
+			 * error.
 			 *
 			 * Also window update packet will cause this situation.
 			 */
@@ -543,8 +556,10 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 		tsk->rcv_nxt = seg->seq + 1;
 		/* send ACK for FIN */
 		tcp_send_ack(tsk, seg);
-		/* FIN implies PUSH for any segment text not yet delivered to the
-		   user. */
+		/*
+		 * FIN implies PUSH for any segment text not yet delivered
+		 * to the user.
+		 */
 	}
 drop:
 	free_pkb(pkb);
