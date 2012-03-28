@@ -56,7 +56,8 @@ static int veth_dev_init(struct netdev *dev)
 {
 	/* init tap: out network nic */
 	if (tap_dev_init() < 0)
-		return -1;
+		perrx("Cannot init tap device");
+
 	/* init veth: information for our netstack */
 	dev->net_mtu = tap->dev.net_mtu;
 	dev->net_ipaddr = FAKE_IPADDR;
