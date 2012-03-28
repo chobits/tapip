@@ -71,7 +71,7 @@ void arp_recv(struct netdev *dev, struct pkbuf *pkb)
 
 	ae = arp_lookup(ahdr->arp_pro, ahdr->arp_sip);
 	if (ae) {
-		/* passive learning(REQUST): update old arp entry in cache */
+		/* passive learning(REQUEST): update old arp entry in cache */
 		hwacpy(ae->ae_hwaddr, ahdr->arp_sha);
 		/* send waiting packet (maybe we receive arp reply) */
 		if (ae->ae_state == ARP_WAITING)
