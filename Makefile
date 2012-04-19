@@ -98,7 +98,8 @@ tag:
 	ctags -R *
 
 clean:
-	rm -f */*.o */*.obj tapip cbuf
+	find . -name *.o | xargs rm -f
+	rm -f tapip cbuf
 
 lines:
 	@echo "code lines:"
