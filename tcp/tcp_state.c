@@ -129,7 +129,13 @@ static void tcp_closed(struct tcp_sock *tsk, struct pkbuf *pkb,
 			struct tcp_segment *seg)
 {
 	tcpsdbg("CLOSED");
-	tcp_send_reset(tsk, seg);
+	/*
+	 * If closed, the connect may not call connect() or listen(),
+	 * in which case it drops incoming packet and responds nothing.
+	 * (see TCP/IP Illustrated Vol.2, tcp_input() L291-292)
+	 */
+	if (!tsk)
+		tcp_send_reset(tsk, seg);
 	free_pkb(pkb);
 }
 
@@ -429,7 +435,7 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 		} else if (seg->ack <= tsk->snd_una) {	/* duplicate ACK */
 			/*
 			 * RFC 793 say we can ignore duplicate ACK.
-			 * What doest `ignore` mean?
+			 * What does `ignore` mean?
 			 * Should we conitnue and not drop segment ?
 			 * -Yes for xinu
 			 * -Yes for linux
