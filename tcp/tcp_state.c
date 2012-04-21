@@ -442,10 +442,12 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 			 * +Yes for tapip
 			 *
 			 * After three-way handshake connection is established,
-			 * then * SND.UNA == SND.NXT, which means next remote
-			 * packet ACK is * always duplicate. Although this
-			 * happens frequently, we should * not view it as an
+			 * then SND.UNA == SND.NXT, which means next remote
+			 * packet ACK is always duplicate. Although this
+			 * happens frequently, we should not view it as an
 			 * error.
+			 *
+			 * Close simultaneously in FIN_WAIT1 also causes this.
 			 *
 			 * Also window update packet will cause this situation.
 			 */
@@ -525,17 +527,7 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 			tsk->sk.ops->recv_notify(&tsk->sk);
 			break;
 		case TCP_FIN_WAIT1:
-			/*
-			 * Can be here?
-			 * No.
-			 *
-			 * Segment has no ACK bit with only FIN bit will
-			 * be dropped in fifth check.
-			 *
-			 * If ACK for our first FIN is in this segment,
-			 * state has been set to FIN-WAIT2
-			 */
-			tcpsdbg("<ERROR> cannot be here!");
+			/* both users close simultaneously */
 			tcp_set_state(tsk, TCP_CLOSING);
 			break;
 		case TCP_CLOSE_WAIT:
