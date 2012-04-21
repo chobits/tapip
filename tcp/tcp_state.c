@@ -311,7 +311,13 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 			if (tsk->parent) {	/* passive open */
 				tcp_unhash(&tsk->sk);
 			} else {
-				/* signal user "connection refused" */
+				/*
+				 * signal user "connection refused"
+				 * when both users open simultaneously.
+				 * XXX: test
+				 */
+				if (tsk->wait_connect)
+					wake_up(tsk->wait_connect);
 			}
 			break;
 		case TCP_ESTABLISHED:
