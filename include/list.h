@@ -77,11 +77,22 @@ static _inline void list_del_init(struct list_head *list)
 	for (entry = list_first_entry(head, typeof(*entry), member);\
 		&entry->member != (head);\
 		entry = list_first_entry(&entry->member, typeof(*entry), member))
+
+#define list_for_each_entry_continue(entry, head, member)\
+	for (; &entry->member != (head);\
+		entry = list_first_entry(&entry->member, typeof(*entry), member))
+
 #define list_for_each_entry_safe(entry, next, head, member)\
 	for (entry = list_first_entry(head, typeof(*entry), member),\
 		next = list_first_entry(&entry->member, typeof(*entry), member);\
 		&entry->member != (head);\
 		entry = next, next = list_first_entry(&next->member, typeof(*entry), member))
+
+#define list_for_each_entry_safe_continue(entry, next, head, member)\
+	for (next = list_first_entry(&entry->member, typeof(*entry), member);\
+		&entry->member != (head);\
+		entry = next, next = list_first_entry(&next->member, typeof(*entry), member))
+
 
 #define list_for_each_entry_reverse(entry, head, member)\
 	for (entry = list_last_entry(head, typeof(*entry), member);\
