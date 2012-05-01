@@ -126,6 +126,7 @@ void ifconfig(int argc, char **argv)
 	ifinfo(veth);
 #ifndef CONFIG_TOP1
 	/* tap0 */
+	printf("\n--- NOTE: this nic isnt in tapip, it is in remote machine ---\n");
 	ifinfo(&tap->dev);
 #endif
 }
@@ -141,7 +142,7 @@ void stat(int argc, char **argv)
 		" free socks:    %d\n",
 		alloc_socks, free_socks);
 	printf("[cbuf memory information]\n"
-		" alloced circul buffers: %d\n"
-		" free circul buffers:    %d\n",
+		" alloced circular buffers: %d\n"
+		" free circular buffers:    %d\n",
 		alloc_cbufs, free_cbufs);
 }

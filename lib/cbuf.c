@@ -1,5 +1,5 @@
 /*
- * circul buffer implementation:
+ * circular buffer implementation:
  *  Although the code is clean and simple,
  *  the culculation is complex (CBUFHEADRIGHT).
  */

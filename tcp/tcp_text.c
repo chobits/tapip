@@ -25,7 +25,7 @@ int tcp_write_buf(struct tcp_sock *tsk, void *data, unsigned int len)
 		tsk->rcv_buf = cbuf;
 	}
 
-	/* write text to circul buffer */
+	/* write text to circular buffer */
 	rlen = write_cbuf(cbuf, (char *)data, len);
 	if (rlen > 0) {
 		tsk->rcv_wnd -= rlen;	/* assert rlen >= 0 */

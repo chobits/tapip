@@ -2,7 +2,7 @@
 #define __CBUF_H
 
 /*
- * circul buffer:
+ * circular buffer:
  *   .<------------size-------------->.
  *   |                                |
  *   |<-x->|<-CBUFUSED->|<-----y----->|
