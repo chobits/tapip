@@ -84,6 +84,7 @@ struct tcp_sock {
 	struct tcp_sock *parent;
 	unsigned int flags;
 	struct cbuf *rcv_buf;
+	struct list_head rcv_reass;	/* list head of unordered reassembled tcp segments */
 	/* transmission control block (RFC 793) */
 	unsigned int snd_una;	/* send unacknowledged */
 	unsigned int snd_nxt;	/* send next */
@@ -102,7 +103,10 @@ struct tcp_sock {
 #define tcpsk(sk) ((struct tcp_sock *)sk)
 #define TCP_MAX_BACKLOG		128
 #define TCP_DEAD_PARENT		((struct tcp_sock *)0xffffdaed)
+
 #define TCP_F_PUSH		0x00000001	/* text pushing to user */
+#define TCP_F_ACKNOW		0x00000002	/* ack at right */
+#define TCP_F_ACKDELAY		0x00000004	/* ack at right */
 
 /* host-order tcp current segment (RFC 793) */
 struct tcp_segment {
@@ -142,7 +146,7 @@ static _inline struct tcp_sock *tcp_accept_dequeue(struct tcp_sock *tsk)
 	return newtsk;
 }
 
-extern void tcp_in(struct pkbuf *pkb);
+extern void tcp_in(struct pkbuf *);
 extern struct sock *tcp_lookup_sock(unsigned int, unsigned int, unsigned int, unsigned int);
 extern void tcp_process(struct pkbuf *, struct tcp_segment *, struct sock *);
 extern struct sock *tcp_alloc_sock(int);
@@ -156,8 +160,11 @@ extern void tcp_send_synack(struct tcp_sock *, struct tcp_segment *);
 extern void tcp_send_ack(struct tcp_sock *, struct tcp_segment *);
 extern void tcp_send_syn(struct tcp_sock *, struct tcp_segment *);
 extern void tcp_send_fin(struct tcp_sock *);
-extern void tcp_recv_text(struct tcp_sock *, struct tcp_segment *);
+extern void tcp_recv_text(struct tcp_sock *, struct tcp_segment *, struct pkbuf *);
 extern void tcp_free_buf(struct tcp_sock *);
+extern int tcp_write_buf(struct tcp_sock *, void *, unsigned int);
+extern void tcp_free_reass_head(struct tcp_sock *);
+extern void tcp_segment_reass(struct tcp_sock *, struct tcp_segment *, struct pkbuf *);
 extern void tcp_send_out(struct tcp_sock *, struct pkbuf *, struct tcp_segment *);
 extern int tcp_send_text(struct tcp_sock *, void *, int);
 
@@ -167,6 +174,18 @@ extern const char *tcp_state_string[];
 
 #define for_each_tcp_sock(tsk, node, head)\
 	hlist_for_each_entry(tsk, node, head, bhash_list)
+
+/* used by tcp_recv_text() & tcp_reass() */
+#define ADJACENT_SEGMENT_HEAD(nseq)				\
+	do {							\
+		if ((nseq) > seg->seq) {			\
+			if (seg->dlen <= (nseq) - seg->seq)	\
+				goto out;			\
+			seg->dlen -= (nseq) - seg->seq;		\
+			seg->text += (nseq) - seg->seq;		\
+			seg->seq = (nseq);			\
+		}						\
+	} while (0)
 
 static _inline void tcp_set_state(struct tcp_sock *tsk, enum tcp_state state)
 {

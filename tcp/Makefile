@@ -1,4 +1,4 @@
-OBJS	= tcp_in.o tcp_out.o tcp_state.o tcp_sock.o tcp_text.o tcp_timer.o
+OBJS	= tcp_in.o tcp_out.o tcp_state.o tcp_sock.o tcp_text.o tcp_timer.o tcp_reass.o
 SUBDIR	= tcp
 
 all:tcp_obj.o

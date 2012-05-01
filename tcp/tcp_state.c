@@ -197,7 +197,7 @@ static void tcp_synsent(struct pkbuf *pkb, struct tcp_segment *seg,
 			tsk->snd_wnd = seg->wnd;
 			tsk->snd_wl1 = seg->seq;
 			tsk->snd_wl2 = seg->ack;
-			/* reply ACK seq=snd.nxt, ack=rcv.nxt */
+			/* reply ACK seq=snd.nxt, ack=rcv.nxt at right */
 			tcp_send_ack(tsk, seg);
 			tcpsdbg("Active three-way handshake successes!(SND.WIN:%d)", tsk->snd_wnd);
 			wake_up(tsk->wait_connect);
@@ -299,7 +299,7 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 	if (seq_check(seg, tsk) < 0) {
 		/* incoming segment is not acceptable */
 		if (!tcphdr->rst)
-			tcp_send_ack(tsk, seg);		/*reply ACK seq=snd.nxt, ack=rcv.nxt*/
+			tsk->flags |= TCP_F_ACKNOW; /*reply ACK seq=snd.nxt, ack=rcv.nxt*/
 		goto drop;
 	}
 	/* second check the RST bit */
@@ -391,7 +391,7 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 		 *  +Yes for tapip
 		 * Are 'snd.una == seg.ack' right?
 		 *  -Yes for RFC 793
-		 *  -Yes for 4.4 BSD
+		 *  -Yes for 4.4BSD-Lite
 		 *  -Yes for xinu, although duplicate ACK
 		 *  -Yes for Linux,
 		 *  +Yes for tapip
@@ -445,6 +445,7 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 			 * Should we conitnue and not drop segment ?
 			 * -Yes for xinu
 			 * -Yes for linux
+			 * -Yes for 4.4BSD-Lite
 			 * +Yes for tapip
 			 *
 			 * After three-way handshake connection is established,
@@ -511,7 +512,7 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 	case TCP_FIN_WAIT1:
 	case TCP_FIN_WAIT2:
 		if (tcphdr->psh || seg->dlen > 0)
-			tcp_recv_text(tsk, seg);
+			tcp_recv_text(tsk, seg, pkb);
 		break;
 	/*
 	 * CLOSE-WAIT|CLOSING|LAST-ACK|TIME-WAIT:
@@ -525,7 +526,10 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 	if (tcphdr->fin) {
 		switch (tsk->state) {
 		case TCP_SYN_RECV:
-		/* SYN-RECV means remote->local connection is established */
+			/*
+			 * SYN-RECV means remote->local connection is established
+			 * see TCP/IP Illustrated Vol.2, tcp_input() L1127-1134
+			 */
 		case TCP_ESTABLISHED:
 			/* waiting user to close */
 			tcp_set_state(tsk, TCP_CLOSE_WAIT);
@@ -536,18 +540,14 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 			/* both users close simultaneously */
 			tcp_set_state(tsk, TCP_CLOSING);
 			break;
-		case TCP_CLOSE_WAIT:
-			/* Remain in the CLOSE-WAIT state */
+		case TCP_CLOSE_WAIT:	/* Remain in the CLOSE-WAIT state */
+		case TCP_CLOSING:	/* Remain in the CLOSING state */
+		case TCP_LAST_ACK:	/* Remain in the LAST-ACK state */
+			/* dont handle it, must be duplicate FIN */
 			break;
-		case TCP_CLOSING:
-			/* Remain in the CLOSING state */
-			break;
-		case TCP_LAST_ACK:
-			/* Remain in the LAST-ACK state */
-			break;
-		case TCP_TIME_WAIT:
-			/* Remain in the TIME-WAIT state */
+		case TCP_TIME_WAIT:	/* Remain in the TIME-WAIT state */
 			/* restart the 2 MSL time-wait timeout */
+			tsk->timewait.timeout = TCP_TIMEWAIT_TIMEOUT;
 			break;
 		case TCP_FIN_WAIT2:
 			/* FIXME: turn off the other timers. */
@@ -559,13 +559,16 @@ void tcp_process(struct pkbuf *pkb, struct tcp_segment *seg, struct sock *sk)
 		/* advance rcv.nxt over fin */
 		tsk->rcv_nxt = seg->seq + 1;
 		/* send ACK for FIN */
-		tcp_send_ack(tsk, seg);
+		tsk->flags |= TCP_F_ACKNOW;
 		/*
 		 * FIN implies PUSH for any segment text not yet delivered
 		 * to the user.
 		 */
 	}
 drop:
+	/* TODO: use ack delay timer instead of sending ack now */
+	if (tsk->flags & (TCP_F_ACKNOW|TCP_F_ACKDELAY))
+		tcp_send_ack(tsk, seg);
 	free_pkb(pkb);
 }
 

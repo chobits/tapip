@@ -303,6 +303,7 @@ static int tcp_close(struct sock *sk)
 		break;
 	}
 	tcp_free_buf(tsk);
+	tcp_free_reass_head(tsk);
 	return 0;
 }
 
@@ -434,6 +435,7 @@ struct sock *tcp_alloc_sock(int protocol)
 	list_init(&tsk->accept_queue);
 	list_init(&tsk->list);
 	list_init(&tsk->sk.recv_queue);
+	list_init(&tsk->rcv_reass);
 	tcp_id++;
 	return &tsk->sk;
 }
