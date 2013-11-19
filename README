@@ -1,5 +1,5 @@
 + What is tapip?
-   A mutlithreaded TCP/IP stack based on linux tap device
+   A user-mode TCP/IP stack based on linux tap device
 
 + Dependence?
   linux tun/tap device (/dev/net/tun exists if supported)

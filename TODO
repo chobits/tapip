@@ -18,19 +18,18 @@
  (Should we use a single thread to receive packet and
   another thread to parse it?)
 
-5.
- Add bridge programming, then we will not use brctl and can delete doc/brctl.sh
+5. Add bridge programming, then we will not use brctl and can delete doc/brctl.sh
 
-6.
- test udp port allocation alogrithm
+6. test udp port allocation alogrithm
 
-7.
- multicast/broadcast ip address handling
+7. multicast/broadcast ip address handling
  ip option handling
 
-8.
- icmp error report to l4(TCP/UDP/RawIP)
+8. icmp error report to l4(TCP/UDP/RawIP)
 
-9.
- add cache layer for internal structure
- (Original memory management using malloc/free is expensive.)
+9. add cache layer for internal structure
+
+10. remove timer thread. use poll timeout to implement it
+
+11. support select, epoll, kqueue ...
+    or use a third-party event library
