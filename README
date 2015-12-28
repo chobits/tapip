@@ -1,3 +1,7 @@
+===========
+= WARNING = You should know that some source code in this project is not a best practice and immature.
+===========                                                                              -- 2015/10/28
+
 + What is tapip?
    A user-mode TCP/IP stack based on linux tap device
 
