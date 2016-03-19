@@ -134,7 +134,7 @@ static void icmp_echo_request(struct icmp_desc *icmp_desc, struct pkbuf *pkb)
 	struct ip *iphdr = pkb2ip(pkb);
 	struct icmp *icmphdr = ip2icmp(iphdr);
 	icmpdbg("echo request data %d bytes icmp_id %d icmp_seq %d",
-			iphdr->ip_len - iphlen(iphdr) - ICMP_HRD_SZ,
+			(int)(iphdr->ip_len - iphlen(iphdr) - ICMP_HRD_SZ),
 			_ntohs(icmphdr->icmp_id),
 			_ntohs(icmphdr->icmp_seq));
 	if (icmphdr->icmp_code) {

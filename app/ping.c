@@ -128,7 +128,7 @@ static void send_packet(void)
 		printf("PING "IPFMT" %d(%d) bytes of data\n",
 			ipfmt(ipaddr),
 			size,
-			size + ICMP_HRD_SZ + IP_HRD_SZ);
+			(int)(size + ICMP_HRD_SZ + IP_HRD_SZ));
 		first = 0;
 	}
 
