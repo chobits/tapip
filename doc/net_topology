@@ -139,6 +139,10 @@ TOP2 (tapip communicates with kernel TCP/IP stack)
 =============================================================================
 arping model of TOP2
 
+The following diagram shows arp packet flow of command `# arping 10.0.0.1`.
+Refer to https://github.com/chobits/tapip/blob/master/doc/test#L18 for how to
+run this test.
+
  tap0
 (10.0.0.2)
 
@@ -169,8 +173,8 @@ arping received <----- socket recv <--  tap0(netif_rx) <----.  |                
 
 [ route module and netif_rx() are from linux kernel ]
 
-NOTE: 10.0.0.2 is  tap0 ip address, not our network stack ip address.
+NOTE: 10.0.0.2 is tap0 ip address, not our network stack ip address.
 Our network stack(veth) is `outside network` in terms of tap0,
 so our program is just an emulator of outside network,
-we must assign a fake ip address(10.0.0.1) for ./tapip virtual netif veth !
+we must assign a fake ip address(10.0.0.1) for ./tapip virtual netif veth!
 
