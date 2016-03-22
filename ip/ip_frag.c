@@ -63,6 +63,7 @@ struct pkbuf *reass_frag(struct fragment *frag)
 	unsigned char *p;
 	int hlen, len;
 
+	pkb = NULL;
 	hlen = frag->frag_hlen;
 	len = frag->frag_hlen + frag->frag_size;
 	if (len > 65535) {

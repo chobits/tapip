@@ -128,7 +128,7 @@ out:
 struct socket *_accept(struct socket *sock, struct sock_addr *skaddr)
 {
 	struct socket *newsock = NULL;
-	int err;
+	int err = 0;
 	if (!sock)
 		goto out;
 	get_socket(sock);

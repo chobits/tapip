@@ -44,12 +44,9 @@ void printfs(int mlen, const char *fmt, ...)
 int str2ip(char *str, unsigned int *ip)
 {
 	unsigned int a, b, c, d;
-	if (sscanf(str, "%d.%d.%d.%d", &a, &b, &c, &d) != 4)
+	if (sscanf(str, "%u.%u.%u.%u", &a, &b, &c, &d) != 4)
 		return -1;
-	if ((a < 0 || a > 255) ||
-		(b < 0 || b > 255) ||
-		(c < 0 || c > 255) ||
-		(d < 0 || d > 255))
+	if (a > 255 || b > 255 || c > 255 || d > 255)
 		return -1;
 	*ip = a | (b << 8) | (c << 16) | (d << 24);
 	return 0;
