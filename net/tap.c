@@ -16,7 +16,7 @@
 #include "ip.h"
 #include "tap.h"
 
-static int skfd, skfd6;
+static int skfd;
 
 int setpersist_tap(int fd)
 {
@@ -83,8 +83,8 @@ void getmtu_tap(unsigned char *name, int *mtu)
 
 	strcpy(ifr.ifr_name, (char *)name);
 	/* get net order hardware address */
-	if (ioctl(skfd6, SIOCGIFMTU, (void *)&ifr) < 0) {
-		close(skfd6);
+	if (ioctl(skfd, SIOCGIFMTU, (void *)&ifr) < 0) {
+		close(skfd);
 		perrx("ioctl SIOCGIFHWADDR");
 	}
 	*mtu = ifr.ifr_mtu;
@@ -183,13 +183,9 @@ void set_tap(void)
 	skfd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
 	if (skfd < 0)
 		perrx("socket PF_INET");
-	skfd6 = socket(PF_INET6, SOCK_DGRAM, IPPROTO_IP);
-	if (skfd6 < 0)
-		perrx("socket PF_INET6");
 }
 
 void unset_tap(void)
 {
-	close(skfd6);
 	close(skfd);
 }
