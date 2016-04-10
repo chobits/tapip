@@ -21,7 +21,7 @@ MAKEFLAGS += --no-print-directory
 LD = ld
 CC = gcc
 CFLAGS = -Wall -I../include
-LFLAGS = -lpthread -pthread
+LFLAGS = -pthread
 export LD CC CFLAGS
 
 ifeq ($(CONFIG_DEBUG), y)
