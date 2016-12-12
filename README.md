@@ -42,8 +42,11 @@ A small shell is embedded in tapip.
 So this is just user-mode TCP/IP stack :)
 
 Any use
-=======
-A toy!  
+=======  
 Tapip makes it easy to hack TCP/IP stack, just compiling it to run.  
 It can also do some network test: arp snooping, proxy, and NAT!  
 I think the most important is that tapip helps me learn TCP/IP, and understand linux TCP/IP stack.
+
+Other
+=====
+You can refer to [saminiir/level-ip](https://github.com/saminiir/level-ip) and its blog posts for more details.
