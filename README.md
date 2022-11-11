@@ -1,6 +1,6 @@
 ```
 =========== You should know that some source code in this project is
-= WARNING = not a best practice and immature.
+= WARNING = not a best practice and unstable.
 ===========                                            -- 2015/10/28
 ```
 
