@@ -1,12 +1,10 @@
-```
-=========== You should know that some source code in this project is
-= WARNING = not a best practice and unstable.
-===========                                            -- 2015/10/28
-```
-
 tapip
 =====
-A user-mode TCP/IP stack based on linux tap device
+A user-mode TCP/IP stack based on linux tap device.  
+
+
+* :exclamation: It's not a production-ready networking stack, only my practical project after learning network stack.
+* :memo: If you have already learned the TCP/IP stack and want to build one to replace linux's own protocol stack to play, try this [network toplogy](doc/net_topology#L126).
 
 Dependence
 ==========
@@ -23,6 +21,7 @@ $ make
 [net shell]: help            (see all embedded commands)
 ...
 ```
+
 The corresponding network topology is [here](doc/net_topology#L126).
 
 More information for hacking TCP/UDP/IP/ICMP:  
