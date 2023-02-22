@@ -4,7 +4,9 @@ A user-mode TCP/IP stack based on linux tap device.
 
 
 * :exclamation: It's not a production-ready networking stack, only my practical project after learning network stack.
-* :memo: If you have already learned the TCP/IP stack and want to build one to replace linux's own protocol stack to play, try this [network toplogy](doc/net_topology#L126).
+* :memo: If you have already learned the TCP/IP stack and want to 
+  * build one to replace Linux network stack to play, try this [network toplogy (1)](doc/net_topology#L2).
+  * build one to communicate with localhost (Linux network stack and apps on it), try  [network toplogy (2)](doc/net_topology#L126).
 
 Dependence
 ==========
@@ -22,7 +24,7 @@ $ make
 ...
 ```
 
-The corresponding network topology is [here](doc/net_topology#L126).
+The corresponding network topology is here: [network topology (2)](doc/net_topology#L126).
 
 More information for hacking TCP/UDP/IP/ICMP:  
   See [doc/net_topology](doc/net_topology), and select a script from [doc/test](doc/test) to do.
