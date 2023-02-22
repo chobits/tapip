@@ -5,8 +5,8 @@ A user-mode TCP/IP stack based on linux tap device.
 
 * :exclamation: It's not a production-ready networking stack, only my practical project after learning network stack.
 * :memo: If you have already learned the TCP/IP stack and want to 
-  * build one to replace Linux network stack to play, try this [network toplogy (1)](doc/net_topology#L2).
-  * build one to communicate with localhost (Linux network stack and apps on it), try  [network toplogy (2)](doc/net_topology#L126).
+  * build one to replace the Linux network stack to play, try [network toplogy (1)](doc/net_topology#L2).
+  * build one to communicate with localhost (the Linux network stack and apps on it), try  [network toplogy (2)](doc/net_topology#L126).
 
 Dependence
 ==========
