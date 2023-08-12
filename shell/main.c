@@ -19,7 +19,7 @@ extern void tcp_timer(void);
  */
 pthread_t threads[4];
 
-int newthread(pfunc_t thread_func)
+pthread_t newthread(pfunc_t thread_func)
 {
 	pthread_t tid;
 	if (pthread_create(&tid, NULL, thread_func, NULL))
