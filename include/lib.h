@@ -22,7 +22,7 @@
 extern int pthread_mutexattr_settype(pthread_mutexattr_t *, int);
 typedef void *(*pfunc_t)(void *);
 extern pthread_t threads[];
-extern int newthread(pfunc_t thread_func);
+extern pthread_t newthread(pfunc_t thread_func);
 
 #define gettid() syscall(SYS_gettid)
 
